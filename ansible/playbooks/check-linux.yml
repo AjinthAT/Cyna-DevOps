@@ -1,0 +1,21 @@
+---
+- name: Vérification système Linux
+  hosts: linux
+  become: true
+
+  tasks:
+    - name: Afficher le hostname
+      command: hostname
+      register: hostname_result
+
+    - name: Afficher le résultat
+      debug:
+        var: hostname_result.stdout
+
+    - name: Vérifier que Docker est installé
+      command: docker --version
+      register: docker_result
+
+    - name: Afficher version Docker
+      debug:
+        var: docker_result.stdout
