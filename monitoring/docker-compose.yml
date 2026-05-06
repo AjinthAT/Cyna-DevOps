@@ -49,5 +49,16 @@ services:
       - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
     restart: unless-stopped
 
+  incident-webhook:
+    build:
+      context: ../incident-webhook
+    container_name: cyna-incident-webhook
+    ports:
+      - "5000:5000"
+    volumes:
+      - incident_data:/data
+    restart: unless-stopped
+
 volumes:
   grafana_data:
+  incident_data:

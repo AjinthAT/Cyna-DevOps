@@ -1,5 +1,11 @@
 route:
-  receiver: "default"
+  receiver: "incident-webhook"
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 2m
 
 receivers:
-  - name: "default"
+  - name: "incident-webhook"
+    webhook_configs:
+      - url: "http://incident-webhook:5000/alert"
+        send_resolved: true
