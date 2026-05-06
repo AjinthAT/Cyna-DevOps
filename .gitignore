@@ -1,0 +1,9 @@
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.key
+*.pem
+*.conf
+.env
+__pycache__/
+.vscode/
