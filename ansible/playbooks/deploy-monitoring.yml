@@ -1,0 +1,47 @@
+---
+- name: Déployer la stack monitoring CYNA
+  hosts: devops
+  become: true
+
+  tasks:
+    - name: Installer les dépendances système
+      apt:
+        name:
+          - git
+          - curl
+          - wget
+          - unzip
+          - ca-certificates
+          - gnupg
+        state: present
+        update_cache: true
+
+    - name: Vérifier que Docker est installé
+      command: docker --version
+      register: docker_version
+      changed_when: false
+
+    - name: Afficher la version Docker
+      debug:
+        var: docker_version.stdout
+
+    - name: Vérifier la configuration Docker Compose
+      command: docker compose config
+      args:
+        chdir: /home/administrateur/cyna-devops/monitoring
+      register: compose_config
+      changed_when: false
+
+    - name: Déployer la stack monitoring
+      command: docker compose up -d
+      args:
+        chdir: /home/administrateur/cyna-devops/monitoring
+
+    - name: Vérifier les conteneurs actifs
+      command: docker ps --format "table {{ '{{' }}.Names{{ '}}' }}\t{{ '{{' }}.Status{{ '}}' }}"
+      register: docker_ps
+      changed_when: false
+
+    - name: Afficher les conteneurs
+      debug:
+        var: docker_ps.stdout_lines
