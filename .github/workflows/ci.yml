@@ -1,0 +1,27 @@
+name: CYNA DevOps CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose
+        run: docker compose -f monitoring/docker-compose.yml config
+
+      - name: Check Python syntax
+        run: python -m py_compile incident-webhook/app.py
+
+      - name: Install Ansible
+        run: pipx install ansible-core
+
+      - name: Check Ansible playbooks syntax
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/check-linux.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-monitoring.yml --syntax-check
