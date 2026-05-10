@@ -70,3 +70,14 @@ Relancer Node Exporter :
 ## Documentation
 
 La documentation est disponible dans le dossier docs/.
+
+## Gestion des incidents
+
+Le projet inclut un webhook Flask permettant de recevoir les alertes Alertmanager, de les transformer en incidents et de les stocker dans un fichier JSON persistant.
+
+Commandes utiles :
+
+```bash
+curl http://localhost:5000/incidents
+curl http://localhost:5000/incidents/<id>
+curl -X POST http://localhost:5000/incidents/<id>/resolve
