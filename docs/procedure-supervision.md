@@ -62,3 +62,10 @@ Le webhook enregistre les alertes sous forme JSON avec :
 - labels ;
 - source ;
 - outil.
+
+## Vérification des services
+
+Après le déploiement de la stack DevOps, les services peuvent être vérifiés avec le script suivant :
+
+```bash
+bash scripts/check-services.sh
