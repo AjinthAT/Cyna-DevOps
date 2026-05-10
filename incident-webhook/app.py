@@ -45,7 +45,7 @@ def get_incident(incident_id):
     incidents = load_incidents()
 
     for incident in incidents:
-        if incident["id"] == incident_id:
+        if incident.get("id") == incident_id:
             return jsonify(incident), 200
 
     return jsonify({"error": "incident not found"}), 404
@@ -56,7 +56,7 @@ def resolve_incident(incident_id):
     incidents = load_incidents()
 
     for incident in incidents:
-        if incident["id"] == incident_id:
+        if incident.get("id") == incident_id:
             incident["status"] = "resolved"
             incident["resolved_at"] = datetime.now(timezone.utc).isoformat()
             save_incidents(incidents)
