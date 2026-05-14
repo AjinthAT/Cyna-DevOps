@@ -1,23 +1,31 @@
 #!/bin/bash
+
 set -e
 
-BACKUP_DIR=${1:-"./backup"}
+BACKUP_FILE="$1"
+PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+RESTORE_PARENT="$(dirname "$PROJECT_DIR")"
 
-echo "[CYNA] Restauration de la stack DevOps depuis : $BACKUP_DIR"
-
-if [ ! -d "$BACKUP_DIR" ]; then
-  echo "[ERREUR] Dossier de sauvegarde introuvable : $BACKUP_DIR"
+if [ -z "$BACKUP_FILE" ]; then
+  echo "[ERREUR] Usage : ./scripts/restore-devops.sh /chemin/backup.tar.gz"
   exit 1
 fi
 
-echo "[CYNA] Arrêt de la stack de supervision..."
-docker compose -f monitoring/docker-compose.yml down || true
+if [ ! -f "$BACKUP_FILE" ]; then
+  echo "[ERREUR] Archive introuvable : $BACKUP_FILE"
+  exit 1
+fi
 
-echo "[CYNA] Restauration des fichiers de configuration..."
-cp -r "$BACKUP_DIR/monitoring" ./ || true
-cp -r "$BACKUP_DIR/incident-webhook" ./ || true
+echo "[CYNA] Arrêt de la stack DevOps..."
+docker compose -f "$PROJECT_DIR/monitoring/docker-compose.yml" down || true
+
+echo "[CYNA] Sauvegarde temporaire du dossier actuel..."
+mv "$PROJECT_DIR" "$PROJECT_DIR.before-restore-$(date +%F-%H%M)"
+
+echo "[CYNA] Restauration depuis : $BACKUP_FILE"
+tar -xzf "$BACKUP_FILE" -C "$RESTORE_PARENT"
 
 echo "[CYNA] Redémarrage de la stack DevOps..."
-docker compose -f monitoring/docker-compose.yml up -d --build
+docker compose -f "$PROJECT_DIR/monitoring/docker-compose.yml" up -d --build
 
 echo "[CYNA] Restauration terminée."
