@@ -61,6 +61,42 @@ services:
       - incident_data:/data
     restart: unless-stopped
 
+  glpi-db:
+    image: mariadb:10.11
+    container_name: cyna-glpi-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: glpidb
+      MYSQL_USER: glpi
+      MYSQL_PASSWORD: glpipassword
+    volumes:
+      - glpi_db_data:/var/lib/mysql
+    networks:
+      - monitoring
+
+  glpi:
+    image: diouxx/glpi
+    container_name: cyna-glpi
+    restart: unless-stopped
+    depends_on:
+      - glpi-db
+    ports:
+      - "8080:80"
+    environment:
+      TIMEZONE: Europe/Paris
+    volumes:
+      - glpi_data:/var/www/html/glpi
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge
+
+
 volumes:
   grafana_data:
   incident_data:
+  glpi_db_data:
+  glpi_data:
