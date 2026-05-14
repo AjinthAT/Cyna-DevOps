@@ -65,15 +65,16 @@ def resolve_incident(incident_id):
     return jsonify({"error": "incident not found"}), 404
 
 
+
+
 @app.route("/alert", methods=["POST"])
 @app.route("/webhook", methods=["POST"])
 def receive_alert():
     payload = request.get_json(silent=True) or {}
-
     alerts = payload.get("alerts", [])
 
     incidents = load_incidents()
-    created_incidents = []
+    processed_incidents = []
 
     if not alerts:
         incident = {
@@ -87,19 +88,79 @@ def receive_alert():
         }
 
         incidents.append(incident)
-        created_incidents.append(incident)
+        processed_incidents.append(incident)
+        save_incidents(incidents)
+
+        return jsonify({
+            "status": "received",
+            "processed": len(processed_incidents),
+            "incidents": processed_incidents
+        }), 201
 
     for alert in alerts:
         labels = alert.get("labels", {})
         annotations = alert.get("annotations", {})
 
+        alert_status = alert.get("status", payload.get("status", "firing"))
+        alertname = labels.get("alertname", "unknown")
+        instance = labels.get("instance", "unknown")
+        job = labels.get("job", "unknown")
+        fingerprint = alert.get("fingerprint", f"{alertname}:{instance}:{job}")
+
+        if alert_status == "resolved":
+            for incident in incidents:
+                same_incident = (
+                    incident.get("fingerprint") == fingerprint
+                    or (
+                        incident.get("alertname") == alertname
+                        and incident.get("instance") == instance
+                        and incident.get("job") == job
+                    )
+                )
+
+                if same_incident and incident.get("status") == "open":
+                    incident["status"] = "resolved"
+                    incident["resolved_at"] = datetime.now(timezone.utc).isoformat()
+                    processed_incidents.append(incident)
+                    break
+
+            save_incidents(incidents)
+
+            return jsonify({
+                "status": "resolved",
+                "processed": len(processed_incidents),
+                "incidents": processed_incidents
+            }), 200
+
+        existing_incident = None
+
+        for incident in incidents:
+            same_incident = (
+                incident.get("fingerprint") == fingerprint
+                or (
+                    incident.get("alertname") == alertname
+                    and incident.get("instance") == instance
+                    and incident.get("job") == job
+                )
+            )
+
+            if same_incident and incident.get("status") == "open":
+                existing_incident = incident
+                break
+
+        if existing_incident:
+            existing_incident["last_seen_at"] = datetime.now(timezone.utc).isoformat()
+            processed_incidents.append(existing_incident)
+            continue
+
         incident = {
             "id": str(uuid.uuid4()),
+            "fingerprint": fingerprint,
             "status": "open",
             "severity": labels.get("severity", "unknown"),
-            "alertname": labels.get("alertname", "unknown"),
-            "instance": labels.get("instance", "unknown"),
-            "job": labels.get("job", "unknown"),
+            "alertname": alertname,
+            "instance": instance,
+            "job": job,
             "summary": annotations.get("summary", "Aucune description courte"),
             "description": annotations.get("description", "Aucune description détaillée"),
             "starts_at": alert.get("startsAt"),
@@ -107,15 +168,15 @@ def receive_alert():
         }
 
         incidents.append(incident)
-        created_incidents.append(incident)
+        processed_incidents.append(incident)
 
     save_incidents(incidents)
 
     return jsonify({
         "status": "received",
-        "created": len(created_incidents),
-        "incidents": created_incidents
-    }), 201
+        "processed": len(processed_incidents),
+        "incidents": processed_incidents
+    }), 200
 
 
 if __name__ == "__main__":
