@@ -2,11 +2,11 @@
 
 ## Objectif
 
-Cette procédure décrit le fonctionnement de la gestion automatisée des incidents dans la stack DevOps CYNA.
+Cette procédure décrit la manière dont les alertes de supervision sont transformées en incidents exploitables.
 
-Les alertes générées par Prometheus sont transmises à Alertmanager, puis envoyées au webhook d’incidents CYNA.
+## Chaîne d'alerting
 
-## Chaîne de traitement
+Prometheus détecte une anomalie, puis transmet l'alerte à Alertmanager. Alertmanager envoie ensuite l'alerte au webhook Flask, qui crée un incident consultable via API.
 
 ```text
-Prometheus → Alertmanager → Incident Webhook → incidents.json
+Prometheus → Alertmanager → Webhook Flask → incidents.json
