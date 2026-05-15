@@ -1,11 +1,11 @@
 route:
-  receiver: "incident-webhook"
+  receiver: "shuffle-webhook"
   group_wait: 10s
   group_interval: 30s
   repeat_interval: 2m
 
 receivers:
-  - name: "incident-webhook"
+  - name: "shuffle-webhook"
     webhook_configs:
-      - url: "http://incident-webhook:5000/alert"
+      - url: "http://192.168.1.140:3001/api/v1/hooks/webhook_9ebcb8a5-aa77-47c7-8536-2119274c0c91"
         send_resolved: true
