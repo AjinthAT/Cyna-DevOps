@@ -31,11 +31,14 @@ Il couvre :
 
     ansible/              Playbooks Ansible
     monitoring/           Stack Prometheus / Grafana / Alertmanager / GLPI
+    shuffle/workflows/    Exports des workflows Shuffle (SOAR)
     scripts/              Scripts de déploiement, sauvegarde et tests
     docs/                 Documentation technique
     .env.example          Modèle de variables d'environnement (accès GLPI)
 
 Le dossier `terraform/` n'existe pas encore dans ce repository : l'infrastructure Azure (Resource Group, VNet, Key Vault, Monitor, Backup) reste à implémenter.
+
+Shuffle lui-même n'est pas déployé depuis ce repository (installation Docker Swarm séparée sur la VM) : seul l'export de son workflow est versionné ici. Voir `docs/procedure-shuffle-glpi.md`.
 
 ## Déploiement rapide
 

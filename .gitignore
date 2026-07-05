@@ -8,7 +8,5 @@
 __pycache__/
 .vscode/
 .env.local
-.env.local
-*Alertmanager vers GLPI*.json
 Cahier des charges.docx
 Sujet cours.docx
