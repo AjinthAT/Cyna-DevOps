@@ -41,16 +41,14 @@ Supervision prévue :
 - état des ports nécessaires ;
 - intégration possible des alertes vers Splunk SOAR.
 
-### ServiceNow / Splunk SOAR
+### Automatisation des incidents
 
-Le webhook actuel simule un outil d'automatisation d'incident.
+L'automatisation actuelle repose sur Shuffle (SOAR) et GLPI (voir `procedure-shuffle-glpi.md`).
 
-En production, il pourrait être remplacé par :
+Des intégrations complémentaires restent possibles :
 
-- API ServiceNow ;
-- Splunk SOAR ;
-- Microsoft Teams webhook ;
-- Slack webhook.
+- notification Microsoft Teams ou Slack sur création de ticket ;
+- remontée vers un SIEM/SOC externe si l'équipe Cybersécurité le demande.
 
 ## Principe d'intégration
 

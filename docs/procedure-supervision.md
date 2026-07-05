@@ -9,7 +9,7 @@
 | Alertmanager | 9093 | Gestion des alertes |
 | Node Exporter | 9100 | Métriques système |
 | Blackbox Exporter | 9115 | Tests HTTP |
-| Incident Webhook | 5000 | Simulation SOAR / ServiceNow |
+| GLPI | 8080 | Gestion des tickets d'incident (ITSM) |
 
 ## Vérifier les targets Prometheus
 
@@ -43,25 +43,13 @@ Vérifier ensuite :
 
 - Prometheus > Alerts ;
 - Alertmanager ;
-- Webhook incidents.
-
-URL du webhook :
-
-    http://IP_VM:5000/incidents
+- GLPI > Assistance > Tickets (nouveau ticket créé via Shuffle).
 
 Relancer Node Exporter :
 
     docker start cyna-node-exporter
 
-## Exemple d'incident généré
-
-Le webhook enregistre les alertes sous forme JSON avec :
-
-- timestamp ;
-- statut de l'alerte ;
-- labels ;
-- source ;
-- outil.
+Voir `procedure-shuffle-glpi.md` pour le détail de la chaîne d'automatisation du ticket.
 
 ## Vérification des services
 

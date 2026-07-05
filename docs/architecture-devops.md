@@ -15,7 +15,8 @@ La partie DevOps du projet CYNA vise à automatiser le déploiement, la supervis
 | Alertmanager | Gestion et routage des alertes |
 | Node Exporter | Exposition des métriques système Linux |
 | Blackbox Exporter | Tests de disponibilité HTTP |
-| Incident Webhook | Simulation d'un outil SOAR ou ServiceNow |
+| Shuffle | Orchestrateur SOAR, déclenche la création de tickets |
+| GLPI | Gestion des tickets d'incident (ITSM) |
 
 ## Chaîne de supervision
 
@@ -23,9 +24,9 @@ Prometheus collecte les métriques depuis les exporters.
 
 Lorsqu'une anomalie est détectée, Prometheus déclenche une alerte.
 
-Alertmanager reçoit cette alerte et la transmet au webhook d'incident.
+Alertmanager reçoit cette alerte et la transmet à un webhook Shuffle.
 
-Le webhook enregistre l'incident dans un fichier JSON consultable via API.
+Shuffle ouvre une session sur l'API GLPI et crée automatiquement le ticket d'incident correspondant (voir `procedure-shuffle-glpi.md`).
 
 ## Schéma logique
 
@@ -44,10 +45,10 @@ Le webhook enregistre l'incident dans un fichier JSON consultable via API.
     Alertmanager
        |
        v
-    Incident Webhook
+    Shuffle (SOAR)
        |
        v
-    incidents.json
+    GLPI (ticket)
 
 ## Évolutions prévues
 

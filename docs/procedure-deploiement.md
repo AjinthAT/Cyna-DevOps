@@ -44,10 +44,6 @@ Vérifier Prometheus :
 
     curl http://localhost:9090/-/healthy
 
-Vérifier le webhook incident :
-
-    curl http://localhost:5000/health
-
 ## Interfaces disponibles
 
 | Service | URL |
@@ -55,6 +51,6 @@ Vérifier le webhook incident :
 | Prometheus | http://IP_VM:9090 |
 | Grafana | http://IP_VM:3000 |
 | Alertmanager | http://IP_VM:9093 |
-| Incident Webhook | http://IP_VM:5000/incidents |
+| GLPI | http://IP_VM:8080 |
 | Node Exporter | http://IP_VM:9100/metrics |
 | Blackbox Exporter | http://IP_VM:9115 |

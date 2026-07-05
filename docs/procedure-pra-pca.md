@@ -13,7 +13,6 @@ Les éléments suivants doivent être sauvegardés :
 - configurations Prometheus ;
 - règles d'alerting ;
 - configuration Alertmanager ;
-- code du webhook incident ;
 - scripts de déploiement ;
 - documentation technique.
 

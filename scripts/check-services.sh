@@ -12,7 +12,4 @@ curl -f http://localhost:3000/api/health
 echo "[TEST] Alertmanager"
 curl -f http://localhost:9093/-/healthy
 
-echo "[TEST] Incident Webhook"
-curl -f http://localhost:5000/health
-
 echo "[CYNA] Tous les services DevOps sont disponibles."
