@@ -22,6 +22,18 @@ Ce que ce module ne fait **pas** :
 
 Ce module comble l'écart documenté dans le CDC (« Terraform : non encore implémenté dans le dépôt à la date de rédaction ») et dans le README principal (« Le dossier `terraform/` n'existe pas encore »). Il n'a **pas été appliqué sur un abonnement Azure réel** au moment de sa rédaction : à exécuter avec `terraform plan` avant tout `apply`, et à ajuster selon les retours de `terraform validate` (les APIs Azure Monitor évoluent vite ; le bloc `azurerm_monitor_diagnostic_setting` et le nom de métrique utilisé par `azurerm_monitor_metric_alert.backup_health` sont les points les plus susceptibles de nécessiter un ajustement selon la version exacte du provider résolue).
 
+## Stratégie de tests
+
+Le sujet CYNA cite explicitement des « tests unitaires » pour les scripts Terraform/Ansible. Deux familles d'outils existent pour ça : des frameworks de test dédiés (Terratest pour Terraform, Molecule pour Ansible — exécutent le code dans un environnement jetable et vérifient le résultat), ou une combinaison validation statique + test d'intégration réel (`terraform validate`/`fmt` et un déploiement réel testé en CI, cf. `.github/workflows/ci.yml`, jobs `terraform-validate` et `integration-test`).
+
+Ce module retient la seconde approche, par choix assumé plutôt que par défaut :
+
+- **Terratest nécessite un vrai `terraform apply`** (donc un abonnement Azure actif et des identifiants `ARM_*` en secrets CI) pour tester quoi que ce soit d'utile — un simple `terraform validate` ne suffit pas à Terratest, qui teste l'infrastructure réellement provisionnée. Ce module n'a pas d'identifiants Azure configurés en secrets du dépôt à ce stade du projet (cf. section « Statut ») : Terratest ne pourrait donc pas s'exécuter en CI sans cette étape préalable.
+- Le hub Azure de ce module (Resource Group, VNet, Key Vault, Monitor, Backup, Storage) est un ensemble de ressources d'infrastructure plutôt qu'une logique applicative complexe : `terraform validate` (cohérence du schéma HCL et des types) et `terraform fmt -check` (style) couvrent l'essentiel des erreurs qu'on y rencontre en pratique (référence de variable incorrecte, bloc mal fermé, type invalide).
+- Le job `integration-test` de la CI (voir `docs/architecture-cicd.md`) démontre déjà qu'un déploiement réel est testé bout en bout — pour la stack monitoring Docker Compose, avec les mêmes limites d'accès aux identifiants cloud que pour Terraform.
+
+Si un abonnement Azure dédié aux tests CI devient disponible (via des secrets `ARM_*` sur le dépôt GitHub), Terratest reste l'évolution naturelle pour tester réellement les ressources provisionnées (ex. vérifier qu'un VNet a bien la plage d'adressage attendue) plutôt que seulement leur définition HCL — documenté ici comme évolution possible, pas comme prérequis non tenu.
+
 ## Prérequis
 
 - Un abonnement Azure (abonnement étudiant Azure for Students dans le cadre du projet) ;
