@@ -125,3 +125,30 @@ jobs:
       - name: terraform validate
         working-directory: terraform
         run: terraform validate
+
+  # Helm : lint + rendu (helm template) uniquement, sans cluster k3s
+  # disponible en CI (cf. helm/saas-app/README.md, image de substitution
+  # tant que l'image applicative réelle n'est pas publiée).
+  helm-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.15.4"
+
+      - name: helm lint
+        working-directory: helm/saas-app
+        run: helm lint .
+
+      - name: helm template (autoscaling activé, valeurs par défaut)
+        working-directory: helm/saas-app
+        run: helm template saas-app . -f values.yaml
+
+      - name: helm template (ingress activé)
+        working-directory: helm/saas-app
+        run: helm template saas-app . -f values.yaml --set ingress.enabled=true

@@ -1,0 +1,80 @@
+# -----------------------------------------------------------------------
+# Valeurs par défaut du chart saas-app.
+#
+# image.repository/tag sont volontairement des valeurs de substitution : au
+# moment de la rédaction, l'image du front-end SaaS CYNA lui-même (code
+# applicatif) n'est pas publiée dans un registre accessible depuis ce dépôt
+# DevOps (le dépôt applicatif est distinct). Voir helm/saas-app/README.md
+# pour le détail — c'est le même principe que pour l'API interne et la base
+# de données applicative documentées comme "cible à préciser" dans le CDC
+# (section 12.2).
+# -----------------------------------------------------------------------
+
+replicaCount: 2
+
+image:
+  repository: nginx
+  tag: "1.27-alpine"
+  pullPolicy: IfNotPresent
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# k3s embarque Traefik par défaut : l'ingress est désactivé ici par défaut
+# car SAAS-GE-01 est déjà exposé via un load-balancer dédié en amont
+# (LB-SAAS-01, cf. CDC section 10.5.1 / 12.2) ; à activer uniquement si le
+# routage HTTP doit être géré directement au niveau du cluster k3s plutôt
+# que par LB-SAAS-01.
+ingress:
+  enabled: false
+  className: traefik
+  host: saas.cyna.local
+  annotations: {}
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# Scaling automatique des conteneurs en fonction de la charge (cf. sujet
+# CYNA, section Scripting : "Les scripts doivent gérer le scaling
+# automatique des conteneurs en fonction de la charge (autoscaling)").
+# Nécessite le metrics-server (inclus par défaut dans k3s) pour que le HPA
+# puisse lire l'utilisation CPU réelle des pods.
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercent: 70
+  targetMemoryUtilizationPercent: 80
+
+livenessProbe:
+  path: /
+  initialDelaySeconds: 10
+  periodSeconds: 15
+
+readinessProbe:
+  path: /
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Variables d'environnement injectées dans le conteneur applicatif — à
+# compléter une fois l'API interne (APP-BACKEND-01) et sa base de données
+# formalisées (cf. CDC section 12.2). Laissé vide plutôt qu'inventé.
+env: []
+#  - name: APP_BACKEND_URL
+#    value: "http://app-backend-01.cyna.local:8443"
+
+podAnnotations: {}
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
