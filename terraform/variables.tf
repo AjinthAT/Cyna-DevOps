@@ -50,8 +50,8 @@ variable "enable_vpn_gateway" {
     que le lien site-à-site peut être bloqué par le NAT de l'environnement GNS3, auquel cas
     la démonstration se fait via Azure Arc/Monitor en HTTPS.
   EOT
-  type    = bool
-  default = false
+  type        = bool
+  default     = false
 }
 
 variable "on_prem_gateways" {
@@ -106,8 +106,8 @@ variable "tags" {
   description = "Tags communs appliqués à toutes les ressources."
   type        = map(string)
   default = {
-    projet      = "CYNA"
-    formation   = "Projet Fil Rouge B3 - SUP DE VINCI"
-    gere_par    = "terraform"
+    projet    = "CYNA"
+    formation = "Projet Fil Rouge B3 - SUP DE VINCI"
+    gere_par  = "terraform"
   }
 }

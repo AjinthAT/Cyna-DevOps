@@ -17,10 +17,10 @@ jobs:
 
       - name: Validate Prometheus config and alert rules
         run: |
-          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
-            promtool check config /etc/prometheus/prometheus.yml
-          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
-            promtool check rules /etc/prometheus/alert-rules.yml
+          docker run --rm --entrypoint promtool -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm --entrypoint promtool -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            check rules /etc/prometheus/alert-rules.yml
 
       - name: Install Ansible
         run: pipx install ansible-core
