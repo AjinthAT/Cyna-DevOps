@@ -75,12 +75,12 @@ resource "azurerm_local_network_gateway" "site" {
 resource "azurerm_virtual_network_gateway_connection" "site" {
   for_each = var.enable_vpn_gateway ? var.on_prem_gateways : {}
 
-  name                            = "cnx-${each.key}"
-  location                        = azurerm_resource_group.cyna.location
-  resource_group_name             = azurerm_resource_group.cyna.name
-  type                            = "IPsec"
-  virtual_network_gateway_id      = azurerm_virtual_network_gateway.hub[0].id
-  local_network_gateway_id        = azurerm_local_network_gateway.site[each.key].id
-  shared_key                      = "changez-moi-avant-apply" # à remplacer par un secret réel (cf. Key Vault)
-  tags                            = local.common_tags
+  name                       = "cnx-${each.key}"
+  location                   = azurerm_resource_group.cyna.location
+  resource_group_name        = azurerm_resource_group.cyna.name
+  type                       = "IPsec"
+  virtual_network_gateway_id = azurerm_virtual_network_gateway.hub[0].id
+  local_network_gateway_id   = azurerm_local_network_gateway.site[each.key].id
+  shared_key                 = "changez-moi-avant-apply" # à remplacer par un secret réel (cf. Key Vault)
+  tags                       = local.common_tags
 }

@@ -15,11 +15,13 @@ provider "azurerm" {
       purge_soft_delete_on_destroy    = true
       recover_soft_deleted_key_vaults = true
     }
-    recovery_services_vault {
-      # Autorise `terraform destroy` en environnement de projet étudiant.
-      # A retirer avant tout usage en production réelle.
-      recover_soft_deleted_backup_protected_vm    = true
+    # Les deux blocs ci-dessous autorisent `terraform destroy` en environnement
+    # de projet étudiant. A retirer avant tout usage en production réelle.
+    recovery_service {
       purge_protected_items_from_vault_on_destroy = true
+    }
+    recovery_services_vaults {
+      recover_soft_deleted_backup_protected_vm = true
     }
   }
 }
