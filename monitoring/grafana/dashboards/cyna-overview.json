@@ -2,7 +2,7 @@
   "title": "CYNA - Supervision DevOps",
   "uid": "cyna-devops-overview",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "10s",
   "panels": [
     {
@@ -24,6 +24,94 @@
         {
           "expr": "up",
           "legendFormat": "{{job}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Charge CPU (%)",
+      "description": "Même expression que l'alerte HighCpuLoad (alert-rules.yml) : à surveiller avant qu'elle ne se déclenche à 80%.",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 60 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[2m])) * 100)",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Espace disque libre (%)",
+      "description": "Même expression que l'alerte LowDiskSpace (alert-rules.yml) : à surveiller avant qu'elle ne se déclenche sous 15%.",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 15 },
+              { "color": "green", "value": 30 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        {
+          "expr": "(node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100",
+          "legendFormat": "{{instance}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Disponibilité HTTP(S) — SaaS / Wazuh / services internes",
+      "description": "Résultat des sondes blackbox_exporter (jobs blackbox-http, blackbox-saas-site, blackbox-wazuh-dashboard).",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        }
+      },
+      "targets": [
+        {
+          "expr": "probe_success",
+          "legendFormat": "{{instance}} ({{job}})"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Temps de réponse HTTP(S) (s)",
+      "description": "Même métrique que l'alerte ServiceSlowResponse (alert-rules.yml).",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      },
+      "targets": [
+        {
+          "expr": "probe_duration_seconds",
+          "legendFormat": "{{instance}} ({{job}})"
         }
       ]
     }

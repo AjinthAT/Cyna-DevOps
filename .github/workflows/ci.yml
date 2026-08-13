@@ -15,6 +15,13 @@ jobs:
       - name: Validate Docker Compose
         run: docker compose -f monitoring/docker-compose.yml config
 
+      - name: Validate Prometheus config and alert rules
+        run: |
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            promtool check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            promtool check rules /etc/prometheus/alert-rules.yml
+
       - name: Install Ansible
         run: pipx install ansible-core
 
@@ -22,6 +29,7 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/check-linux.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-monitoring.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-node-exporter.yml --syntax-check
 
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
