@@ -25,7 +25,9 @@ Il couvre :
 - Blackbox Exporter ;
 - Shuffle (orchestrateur SOAR, hébergé à part) ;
 - GLPI + MariaDB (gestion des tickets ITSM) ;
-- Terraform (hub Azure : Resource Group, VNet, Key Vault, Log Analytics/Monitor, Recovery Services Vault, Storage Account).
+- Terraform (hub Azure : Resource Group, VNet, Key Vault, Log Analytics/Monitor, Recovery Services Vault, Storage Account) ;
+- Helm (déploiement et autoscaling de l'application SaaS sur le cluster k3s de SAAS-GE-01) ;
+- GitHub Actions (intégration continue : validation, test d'intégration, `terraform validate`, `helm lint`).
 
 ## Structure du repository
 
@@ -33,11 +35,18 @@ Il couvre :
     monitoring/           Stack Prometheus / Grafana / Alertmanager / GLPI
     shuffle/workflows/    Exports des workflows Shuffle (SOAR)
     terraform/            Hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup, Storage)
+                            + environments/ (dev, staging, prod)
+    helm/saas-app/        Chart Helm pour l'application SaaS (cluster k3s, SAAS-GE-01)
     scripts/              Scripts de déploiement, sauvegarde et tests
     docs/                 Documentation technique
+    .github/workflows/    Pipeline CI/CD (GitHub Actions)
     .env.example          Modèle de variables d'environnement (accès GLPI)
 
-Le hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup) est provisionné par le module dans `terraform/` — voir `terraform/README.md` pour l'utilisation, le statut (non encore appliqué sur un abonnement réel) et le coût. Le VPN site-à-site Azure y est désactivé par défaut (coût horaire, cf. `terraform/variables.tf`).
+Le hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup) est provisionné par le module dans `terraform/` — voir `terraform/README.md` pour l'utilisation, le multi-environnement, le statut (non encore appliqué sur un abonnement réel) et le coût. Le VPN site-à-site Azure y est désactivé par défaut (coût horaire, cf. `terraform/variables.tf`).
+
+Le chart Helm dans `helm/saas-app/` déploie l'application front-end SaaS sur le cluster k3s de `SAAS-GE-01` avec scaling automatique (HPA) — voir `helm/saas-app/README.md` pour l'utilisation et ses limites assumées (image applicative de substitution tant que l'image réelle n'est pas publiée).
+
+Le pipeline CI/CD (`.github/workflows/ci.yml`) est détaillé, avec un diagramme de flux, dans `docs/architecture-cicd.md`.
 
 Shuffle lui-même n'est pas déployé depuis ce repository (installation Docker Swarm séparée sur la VM) : seul l'export de son workflow est versionné ici. Voir `docs/procedure-shuffle-glpi.md`.
 
@@ -99,6 +108,7 @@ Tester la création d'un ticket GLPI sans attendre une alerte réelle :
 La documentation détaillée est disponible dans `docs/` :
 
 - `architecture-devops.md` — vue d'ensemble de la chaîne DevOps ;
+- `architecture-cicd.md` — pipeline CI/CD GitHub Actions, avec diagramme de flux ;
 - `procedure-deploiement.md` — prérequis et déploiement de la stack ;
 - `procedure-supervision.md` — supervision Prometheus / Grafana ;
 - `procedure-shuffle-glpi.md` — automatisation des tickets GLPI via Shuffle ;
