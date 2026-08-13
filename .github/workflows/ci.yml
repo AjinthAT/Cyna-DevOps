@@ -146,10 +146,6 @@ jobs:
         working-directory: helm/saas-app
         run: helm lint .
 
-      - name: helm template (autoscaling activé, valeurs par défaut)
+      - name: helm template
         working-directory: helm/saas-app
         run: helm template saas-app . -f values.yaml
-
-      - name: helm template (ingress activé)
-        working-directory: helm/saas-app
-        run: helm template saas-app . -f values.yaml --set ingress.enabled=true

@@ -52,8 +52,7 @@ flowchart TD
     subgraph E["Job: helm-lint"]
         E1["helm lint helm/saas-app"]
         E2["helm template (valeurs par défaut)"]
-        E3["helm template --set ingress.enabled=true"]
-        E1 --> E2 --> E3
+        E1 --> E2
     end
 
     C --> F{"Tous les jobs verts ?"}
@@ -99,10 +98,10 @@ dépôt à ce stade du projet (cf. `terraform/README.md`).
 
 ### `helm-lint`
 
-Lint (`helm lint`) et rendu (`helm template`) du chart `helm/saas-app`, avec
-et sans l'ingress activé, via `azure/setup-helm`. Pas de déploiement réel
-sur un cluster k3s en CI, pour la même raison que Terraform (pas
-d'identifiants/kubeconfig en secret du dépôt).
+Lint (`helm lint`) et rendu (`helm template`) du chart `helm/saas-app` via
+`azure/setup-helm`. Pas de déploiement réel sur un cluster k3s en CI, pour
+la même raison que Terraform (pas d'identifiants/kubeconfig en secret du
+dépôt).
 
 ## Déploiement — manuel à ce stade
 

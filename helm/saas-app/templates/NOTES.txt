@@ -7,12 +7,8 @@ Vérifier l'état des pods et du HPA :
   kubectl get hpa -n {{ .Release.Namespace }} {{ include "saas-app.fullname" . }}
   {{- end }}
 
-Service exposé en interne au cluster k3s (SAAS-GE-01) :
+Service exposé en interne au cluster k3s (SAAS-GE-01), en ClusterIP :
+l'exposition externe passe par LB-SAAS-01 en amont du cluster (cf. CDC
+section 10.5.1), pas par un Ingress k3s.
 
   kubectl get svc -n {{ .Release.Namespace }} {{ include "saas-app.fullname" . }}
-
-{{- if not .Values.ingress.enabled }}
-
-L'ingress est désactivé (values.yaml : ingress.enabled=false) : l'exposition
-externe passe par LB-SAAS-01 en amont du cluster (cf. CDC section 10.5.1).
-{{- end }}

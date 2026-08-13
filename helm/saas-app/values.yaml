@@ -20,21 +20,12 @@ image:
 nameOverride: ""
 fullnameOverride: ""
 
+# Type ClusterIP : l'exposition externe passe par LB-SAAS-01, en amont du
+# cluster k3s (cf. CDC section 10.5.1 / 12.2), pas par un Ingress k3s/Traefik.
 service:
   type: ClusterIP
   port: 80
   targetPort: 8080
-
-# k3s embarque Traefik par défaut : l'ingress est désactivé ici par défaut
-# car SAAS-GE-01 est déjà exposé via un load-balancer dédié en amont
-# (LB-SAAS-01, cf. CDC section 10.5.1 / 12.2) ; à activer uniquement si le
-# routage HTTP doit être géré directement au niveau du cluster k3s plutôt
-# que par LB-SAAS-01.
-ingress:
-  enabled: false
-  className: traefik
-  host: saas.cyna.local
-  annotations: {}
 
 resources:
   requests:
