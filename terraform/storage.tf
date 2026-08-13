@@ -11,7 +11,7 @@ resource "azurerm_storage_account" "cyna" {
 
   min_tls_version = "TLS1_2"
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "azurerm_storage_container" "exports" {

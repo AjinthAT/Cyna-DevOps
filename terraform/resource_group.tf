@@ -4,5 +4,5 @@
 resource "azurerm_resource_group" "cyna" {
   name     = var.resource_group_name
   location = var.location
-  tags     = var.tags
+  tags     = local.common_tags
 }

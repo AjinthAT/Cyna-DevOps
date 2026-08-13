@@ -42,6 +42,74 @@ terraform plan
 terraform apply
 ```
 
+Ce flux `terraform.tfvars` (non versionné, cf. `.gitignore`) reste utile pour une expérimentation rapide et personnelle. Pour toute utilisation avec plusieurs environnements distincts (dev / staging / démo finale), utiliser plutôt les fichiers `environments/*.tfvars.example` décrits ci-dessous.
+
+## Multi-environnement
+
+Le module est paramétré par environnement via `var.environment` (désormais réellement appliqué : voir `locals.tf`, qui l'ajoute au tag `environnement` de toutes les ressources) et un fichier `-var-file` dédié par environnement dans `environments/` :
+
+| Environnement | Fichier modèle (versionné) | Resource Group | Usage |
+|---|---|---|---|
+| dev | `environments/dev.tfvars.example` | `RG-CYNA-DEV` | Tests individuels d'une évolution du module, rétention de logs réduite (7 jours) |
+| staging | `environments/staging.tfvars.example` | `RG-CYNA-STAGING` | Validation avant application sur l'environnement de démo, mêmes réglages que prod |
+| prod (démo/soutenance) | `environments/prod.tfvars.example` | `RG-CYNA-PROD` | Environnement présenté en soutenance |
+
+Le `.gitignore` à la racine du dépôt exclut tous les `*.tfvars` (pas seulement `terraform.tfvars`) : ces fichiers sont donc fournis en `.example`, sur le même modèle que `terraform.tfvars.example`. Copier le fichier correspondant avant utilisation :
+
+```bash
+cp environments/dev.tfvars.example environments/dev.tfvars
+```
+
+`key_vault_name`, `storage_account_name`, `recovery_vault_name` et `log_analytics_workspace_name` sont différents dans chaque fichier (contrainte Azure : plusieurs de ces noms doivent être uniques au niveau mondial, et il ne faut pas que deux environnements pointent vers la même ressource).
+
+Ce dépôt n'a pas de backend Terraform distant configuré (`versions.tf` ne déclare pas de bloc `backend`, cf. `.gitignore` qui exclut les `*.tfstate`) : chaque environnement doit donc utiliser un fichier d'état **séparé**, sans quoi `terraform apply` sur `dev` risquerait de modifier ou détruire les ressources `prod`. Deux options :
+
+**Option 1 — état local séparé par environnement (le plus simple, adapté au contexte projet étudiant) :**
+
+```bash
+terraform init
+terraform plan  -var-file=environments/dev.tfvars -state=environments/dev.tfstate
+terraform apply -var-file=environments/dev.tfvars -state=environments/dev.tfstate
+
+# puis, pour l'environnement de démo, avec un état totalement distinct :
+terraform plan  -var-file=environments/prod.tfvars -state=environments/prod.tfstate
+terraform apply -var-file=environments/prod.tfvars -state=environments/prod.tfstate
+```
+
+**Option 2 — backend distant (recommandé pour un usage au-delà du projet étudiant) :** configurer un backend `azurerm` (Storage Account dédié à l'état, hors du périmètre de ce module pour éviter une dépendance circulaire) avec une `key` différente par environnement, par exemple :
+
+```hcl
+# à ajouter dans versions.tf (valeurs indicatives, storage account à créer manuellement en amont)
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-cyna-tfstate"
+    storage_account_name = "stcynatfstate"
+    container_name       = "tfstate"
+    key                  = "cyna.tfstate" # dev.tfstate / staging.tfstate / prod.tfstate selon l'environnement
+  }
+}
+```
+
+## Rollback et journalisation
+
+Le module ne fait aujourd'hui aucun `terraform apply` automatique (le job CI `terraform-validate`, voir `.github/workflows/ci.yml`, se limite à `fmt`/`init -backend=false`/`validate` — pas d'identifiants Azure en secrets du dépôt). Le rollback est donc, à ce stade, un processus manuel mais outillé et journalisé :
+
+1. **Avant tout `apply`**, produire et conserver un plan nommé et daté :
+
+   ```bash
+   terraform plan -var-file=environments/prod.tfvars -state=environments/prod.tfstate -out=environments/plans/prod-$(date +%Y%m%d-%H%M).tfplan
+   ```
+
+   Le dossier `environments/plans/` n'est pas versionné (fichiers `*.tfplan` déjà exclus par `.gitignore`) : ces artefacts sont à archiver hors dépôt (ex. export vers le Storage Account `stcynaprojet`, conteneur `journaux`, créé par `storage.tf`) le temps de la démo, pour pouvoir rejouer exactement l'`apply` correspondant ou l'auditer a posteriori.
+
+2. **Historique des changements de configuration** : chaque évolution du module passe par une Pull Request sur `feature/...` avant fusion dans `main` (historique Git = journal des changements d'infrastructure). `git log --oneline -- terraform/` donne la liste chronologique des évolutions du module.
+
+3. **Rollback applicatif** : revenir à la configuration précédente avec `git revert` (ou `git checkout <commit précédent> -- terraform/`) puis rejouer `terraform plan`/`apply` avec cette configuration antérieure — Terraform ajuste alors l'infrastructure réelle pour qu'elle corresponde à nouveau à l'état du code, ce qui constitue le rollback (approche IaC : on ne restaure pas une sauvegarde d'infrastructure, on ré-applique une version antérieure de la définition).
+
+4. **Rollback des données** (Key Vault, sauvegardes VM) : couvert par les mécanismes Azure natifs déjà activés dans ce module plutôt que par Terraform lui-même — `purge_soft_delete_on_destroy`/`recover_soft_deleted_key_vaults` (Key Vault, `versions.tf`) et la politique de sauvegarde quotidienne (`azurerm_backup_policy_vm`, `backup.tf`) permettent de restaurer une version antérieure des secrets ou des VM sauvegardées indépendamment d'un rollback Terraform.
+
+5. **Journaux** : toutes les opérations de contrôle (création/modification/suppression de ressource, accès Key Vault) sont captées par le Log Analytics Workspace (`law-cyna-<env>`, `monitor.tf`) avec la rétention définie par `log_retention_days` — c'est la source à consulter en cas d'incident lié à un `apply`, en plus du fichier de plan archivé à l'étape 1.
+
 ## Activer le VPN site-à-site
 
 `enable_vpn_gateway` est à `false` par défaut : l'Azure VPN Gateway est facturé à l'heure même à l'arrêt (SKU `VpnGw1` ≈ plusieurs dizaines d'euros par mois), et le CDC (section 9, risques) documente déjà que ce lien peut être bloqué par le NAT de l'environnement GNS3, avec un repli sur Azure Arc/Monitor en HTTPS. Ne l'activer que si le tunnel IPsec a réellement besoin d'être démontré :

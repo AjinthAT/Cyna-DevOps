@@ -9,7 +9,7 @@ resource "azurerm_recovery_services_vault" "cyna" {
 
   soft_delete_enabled = true
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 # Politique de sauvegarde par défaut pour les VM (quotidienne, rétention 30

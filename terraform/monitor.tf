@@ -16,7 +16,7 @@ resource "azurerm_log_analytics_workspace" "cyna" {
   sku               = "PerGB2018"
   retention_in_days = var.log_retention_days
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "azurerm_monitor_action_group" "cyna_alerts" {
@@ -29,7 +29,7 @@ resource "azurerm_monitor_action_group" "cyna_alerts" {
     email_address = "devops@cyna.example" # à remplacer par l'adresse réelle de l'équipe
   }
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 # Exemple d'alerte : échec d'une sauvegarde dans le Recovery Services Vault
@@ -55,7 +55,7 @@ resource "azurerm_monitor_metric_alert" "backup_health" {
     action_group_id = azurerm_monitor_action_group.cyna_alerts.id
   }
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "azurerm_monitor_diagnostic_setting" "key_vault" {

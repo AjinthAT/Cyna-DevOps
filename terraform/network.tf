@@ -8,7 +8,7 @@ resource "azurerm_virtual_network" "hub" {
   location            = azurerm_resource_group.cyna.location
   resource_group_name = azurerm_resource_group.cyna.name
   address_space       = var.vnet_address_space
-  tags                = var.tags
+  tags                = local.common_tags
 }
 
 resource "azurerm_subnet" "this" {
@@ -34,7 +34,7 @@ resource "azurerm_public_ip" "vpn_gateway" {
   resource_group_name = azurerm_resource_group.cyna.name
   allocation_method   = "Dynamic"
   sku                 = "Basic"
-  tags                = var.tags
+  tags                = local.common_tags
 }
 
 resource "azurerm_virtual_network_gateway" "hub" {
@@ -58,7 +58,7 @@ resource "azurerm_virtual_network_gateway" "hub" {
     subnet_id                     = azurerm_subnet.this["GatewaySubnet"].id
   }
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "azurerm_local_network_gateway" "site" {
@@ -69,7 +69,7 @@ resource "azurerm_local_network_gateway" "site" {
   resource_group_name = azurerm_resource_group.cyna.name
   gateway_address     = each.value.gateway_address
   address_space       = each.value.address_space
-  tags                = var.tags
+  tags                = local.common_tags
 }
 
 resource "azurerm_virtual_network_gateway_connection" "site" {
@@ -82,5 +82,5 @@ resource "azurerm_virtual_network_gateway_connection" "site" {
   virtual_network_gateway_id      = azurerm_virtual_network_gateway.hub[0].id
   local_network_gateway_id        = azurerm_local_network_gateway.site[each.key].id
   shared_key                      = "changez-moi-avant-apply" # à remplacer par un secret réel (cf. Key Vault)
-  tags                            = var.tags
+  tags                            = local.common_tags
 }

@@ -19,7 +19,7 @@ resource "azurerm_key_vault" "cyna" {
     bypass         = "AzureServices"
   }
 
-  tags = var.tags
+  tags = local.common_tags
 }
 
 resource "azurerm_key_vault_access_policy" "current_operator" {
