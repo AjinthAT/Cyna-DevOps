@@ -1,0 +1,14 @@
+# Copier en terraform.tfvars et personnaliser avant `terraform apply`.
+# Les valeurs par défaut (variables.tf) fonctionnent pour une démo mais
+# key_vault_name et storage_account_name DOIVENT être uniques au niveau
+# mondial sur Azure : les valeurs par défaut échoueront probablement telles
+# quelles.
+
+location             = "francecentral"
+resource_group_name  = "RG-CYNA-PROD"
+key_vault_name        = "kv-cyna-<vos-initiales>-01"
+storage_account_name  = "stcyna<vosinitiales>01"
+
+# Laisser à false tant que le tunnel IPsec site-à-site n'est pas nécessaire
+# pour la démo (coût horaire même à l'arrêt, cf. variables.tf).
+enable_vpn_gateway = false

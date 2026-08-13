@@ -25,18 +25,19 @@ Il couvre :
 - Blackbox Exporter ;
 - Shuffle (orchestrateur SOAR, hébergé à part) ;
 - GLPI + MariaDB (gestion des tickets ITSM) ;
-- Terraform / OpenTofu à venir.
+- Terraform (hub Azure : Resource Group, VNet, Key Vault, Log Analytics/Monitor, Recovery Services Vault, Storage Account).
 
 ## Structure du repository
 
     ansible/              Playbooks Ansible
     monitoring/           Stack Prometheus / Grafana / Alertmanager / GLPI
     shuffle/workflows/    Exports des workflows Shuffle (SOAR)
+    terraform/            Hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup, Storage)
     scripts/              Scripts de déploiement, sauvegarde et tests
     docs/                 Documentation technique
     .env.example          Modèle de variables d'environnement (accès GLPI)
 
-Le dossier `terraform/` n'existe pas encore dans ce repository : l'infrastructure Azure (Resource Group, VNet, Key Vault, Monitor, Backup) reste à implémenter.
+Le hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup) est provisionné par le module dans `terraform/` — voir `terraform/README.md` pour l'utilisation, le statut (non encore appliqué sur un abonnement réel) et le coût. Le VPN site-à-site Azure y est désactivé par défaut (coût horaire, cf. `terraform/variables.tf`).
 
 Shuffle lui-même n'est pas déployé depuis ce repository (installation Docker Swarm séparée sur la VM) : seul l'export de son workflow est versionné ici. Voir `docs/procedure-shuffle-glpi.md`.
 
