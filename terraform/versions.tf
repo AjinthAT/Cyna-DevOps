@@ -18,7 +18,7 @@ provider "azurerm" {
     recovery_services_vault {
       # Autorise `terraform destroy` en environnement de projet étudiant.
       # A retirer avant tout usage en production réelle.
-      recover_soft_deleted_backup_protected_vm = true
+      recover_soft_deleted_backup_protected_vm    = true
       purge_protected_items_from_vault_on_destroy = true
     }
   }
