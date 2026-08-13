@@ -1,0 +1,15 @@
+# Démonstration / soutenance (voir README.md de ce dossier). key_vault_name
+# et storage_account_name DOIVENT être uniques au niveau mondial sur Azure :
+# personnaliser avant tout apply réel.
+
+location            = "francecentral"
+resource_group_name = "RG-CYNA-PROD"
+environment         = "prod"
+
+key_vault_name               = "kv-cyna-prod-01"
+storage_account_name         = "stcynaprod01"
+recovery_vault_name          = "rsv-cyna-prod"
+log_analytics_workspace_name = "law-cyna-prod"
+
+log_retention_days = 30
+enable_vpn_gateway = false

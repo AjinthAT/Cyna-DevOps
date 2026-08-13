@@ -1,0 +1,102 @@
+---
+# Matrice de flux — Sophos Genève : source de vérité unique pour les règles
+# de filtrage inter-VLAN. Modifier cette liste puis rejouer
+# deploy-firewall-rules.yml pour appliquer le changement.
+#
+# Posture Zero Trust : toute communication inter-VLAN non listée ici reste
+# bloquée par défaut (déni implicite entre zones SFOS, SEC-FW-01) — chaque
+# entrée est une exception motivée, pas une liste de blocages.
+#
+# Prérequis (zones/services Sophos à créer au préalable) et hypothèses
+# assumées : voir ../../../docs/procedure-firewall-automation.md.
+
+firewall_rules:
+  # SEC-FW-01 : accès d'administration limité au VLAN MGMT (cf. CDC section
+  # 10.5.4, "accès d'administration limités au VLAN MGMT ou aux postes
+  # autorisés").
+  - name: "MGMT-to-ALL-admin"
+    source_zone: "MGMT-GE"
+    dest_zone: "Any"
+    services: ["HTTPS", "SSH", "RDP"]
+    log_traffic: true
+    description: "Postes d'administration (MGMT-GE) vers toutes les zones : gestion des serveurs/équipements."
+
+  # Authentification annuaire depuis les postes utilisateurs et les serveurs
+  # applicatifs vers l'AD (SERVERS-GE).
+  - name: "USERS-to-SERVERS-addc"
+    source_zone: "USERS-GE"
+    dest_zone: "SERVERS-GE"
+    services: ["AD-DS"]
+    log_traffic: true
+    description: "Authentification/DNS des postes utilisateurs vers AD-GE-01/02 et FILE-GE-01."
+
+  - name: "BACKEND-to-SERVERS-addc"
+    source_zone: "BACKEND-APP"
+    dest_zone: "SERVERS-GE"
+    services: ["AD-DS"]
+    log_traffic: true
+    description: "Résolution DNS et éventuelle authentification de service depuis APP-BACKEND-01."
+
+  # Accès des utilisateurs à la plateforme SaaS publiée en DMZ.
+  - name: "USERS-to-DMZ-saas"
+    source_zone: "USERS-GE"
+    dest_zone: "DMZ-SAAS"
+    services: ["HTTPS"]
+    log_traffic: true
+    description: "Accès des postes utilisateurs à la plateforme SaaS (SAAS-GE-01)."
+
+  # Flux interne SaaS <-> backend applicatif (cf. CDC section 12.2 : API/BDD
+  # non détaillées à ce stade — port HTTPS générique en attendant).
+  - name: "DMZ-to-BACKEND-api"
+    source_zone: "DMZ-SAAS"
+    dest_zone: "BACKEND-APP"
+    services: ["SAAS-API"]
+    log_traffic: true
+    description: "Appels de l'API interne (SAAS-GE-01 -> APP-BACKEND-01) : port exact à préciser (CDC 12.2)."
+
+  # Supervision : Prometheus (MONITOR-GE-01, VLAN 50) scrape les exporters
+  # de toutes les zones ; les agents Wazuh remontent vers WAZUH-GE-01.
+  - name: "SOC-to-ALL-scrape"
+    source_zone: "SOC-MONITORING"
+    dest_zone: "Any"
+    services: ["MONITORING"]
+    log_traffic: false
+    description: "Prometheus (MONITOR-GE-01) scrape Node Exporter/Blackbox sur toutes les zones supervisées."
+
+  - name: "ALL-to-SOC-wazuh-agents"
+    source_zone: "Any"
+    dest_zone: "SOC-MONITORING"
+    services: ["MONITORING"]
+    log_traffic: false
+    description: "Agents Wazuh de toutes les zones vers WAZUH-GE-01 (SEC-FW-03 : logs remontés au SIEM)."
+
+  # Sauvegardes (BACKUP-GE-01, VLAN 60) vers les zones sauvegardées.
+  - name: "BACKUP-to-SERVERS"
+    source_zone: "BACKUP-PRA"
+    dest_zone: "SERVERS-GE"
+    services: ["SSH", "HTTPS"]
+    log_traffic: true
+    description: "Jobs de sauvegarde Veeam (BACKUP-GE-01) vers AD-GE-01/02, FILE-GE-01."
+
+  - name: "BACKUP-to-DMZ"
+    source_zone: "BACKUP-PRA"
+    dest_zone: "DMZ-SAAS"
+    services: ["SSH", "HTTPS"]
+    log_traffic: true
+    description: "Jobs de sauvegarde Veeam (BACKUP-GE-01) vers SAAS-GE-01."
+
+  # Wi-Fi invité : Internet uniquement, aucun flux vers le LAN interne (SEC-FW-01).
+  - name: "GUEST-to-WAN-only"
+    source_zone: "WIFI-GUEST"
+    dest_zone: "WAN"
+    services: ["HTTP", "HTTPS", "DNS"]
+    log_traffic: false
+    description: "Wi-Fi invité : accès Internet uniquement, aucune règle vers les VLANs internes."
+
+  # VPN site-à-site vers Paris (SEC-FW-05 : tunnel chiffré).
+  - name: "GENEVE-to-PARIS-vpn"
+    source_zone: "SERVERS-GE"
+    dest_zone: "VPN"
+    services: ["AD-DS"]
+    log_traffic: true
+    description: "Authentification AD des utilisateurs Paris vers l'AD Genève, via le tunnel VPN IPsec (SEC-FW-05)."

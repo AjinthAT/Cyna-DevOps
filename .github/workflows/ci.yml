@@ -15,6 +15,13 @@ jobs:
       - name: Validate Docker Compose
         run: docker compose -f monitoring/docker-compose.yml config
 
+      - name: Validate Prometheus config and alert rules
+        run: |
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            promtool check config /etc/prometheus/prometheus.yml
+          docker run --rm -v "$PWD/monitoring/prometheus:/etc/prometheus" prom/prometheus:latest \
+            promtool check rules /etc/prometheus/alert-rules.yml
+
       - name: Install Ansible
         run: pipx install ansible-core
 
@@ -22,9 +29,123 @@ jobs:
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/check-linux.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-monitoring.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-node-exporter.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-firewall-rules.yml --syntax-check
 
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: Check shell scripts
         run: shellcheck scripts/*.sh
+
+  # Test d'intégration : déploie réellement la stack et vérifie qu'elle
+  # répond, plutôt que de se contenter de valider la syntaxe des fichiers
+  # (cf. sujet Cyna, section Scripting : "tests de validation automatisés
+  # pour vérifier la bonne application des configurations").
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: validate
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Déployer la stack de supervision
+        working-directory: monitoring
+        run: docker compose up -d --build
+
+      - name: Attendre que les services démarrent
+        run: sleep 20
+
+      - name: Vérifier Prometheus (/-/healthy)
+        run: curl --fail --retry 5 --retry-delay 5 http://localhost:9090/-/healthy
+
+      - name: Vérifier Grafana (/api/health)
+        run: curl --fail --retry 5 --retry-delay 5 http://localhost:3000/api/health
+
+      - name: Vérifier Alertmanager (/-/healthy)
+        run: curl --fail --retry 5 --retry-delay 5 http://localhost:9093/-/healthy
+
+      - name: Vérifier Node Exporter (/metrics)
+        run: curl --fail --retry 5 --retry-delay 5 http://localhost:9100/metrics > /dev/null
+
+      - name: Vérifier Blackbox Exporter (/metrics)
+        run: curl --fail --retry 5 --retry-delay 5 http://localhost:9115/metrics > /dev/null
+
+      - name: Vérifier que Prometheus scrape bien ses cibles internes
+        run: |
+          # Les cibles "linux-node-exporter-infra" et "windows-exporter-infra"
+          # resteront "down" en CI (les VM GNS3 ne sont pas joignables depuis
+          # ce runner) : on vérifie seulement que Prometheus a bien chargé la
+          # config, pas que toutes les cibles répondent.
+          curl -s http://localhost:9090/api/v1/targets | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          jobs = {t['scrapePool'] for t in data['data']['activeTargets']}
+          expected = {'prometheus', 'devops-vm-node-exporter', 'linux-node-exporter-infra', 'windows-exporter-infra', 'blackbox-http', 'blackbox-saas-site', 'blackbox-wazuh-dashboard'}
+          missing = expected - jobs
+          assert not missing, f'jobs manquants dans la config Prometheus chargée : {missing}'
+          print('Tous les jobs attendus sont bien chargés par Prometheus :', jobs)
+          "
+
+      - name: Vérifier GLPI (HTTP 200 sur la page d'accueil)
+        run: curl --fail --retry 10 --retry-delay 5 http://localhost:8080/ > /dev/null
+
+      - name: Logs des conteneurs en cas d'échec
+        if: failure()
+        working-directory: monitoring
+        run: docker compose logs --tail=100
+
+      - name: Nettoyer
+        if: always()
+        working-directory: monitoring
+        run: docker compose down -v
+
+  # Terraform : validation statique uniquement (pas de terraform plan/apply
+  # en CI, faute d'identifiants Azure configurés en secrets du dépôt).
+  terraform-validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: terraform fmt -check
+        working-directory: terraform
+        run: terraform fmt -check -recursive
+
+      - name: terraform init (sans backend distant)
+        working-directory: terraform
+        run: terraform init -backend=false
+
+      - name: terraform validate
+        working-directory: terraform
+        run: terraform validate
+
+  # Helm : lint + rendu (helm template) uniquement, sans cluster k3s
+  # disponible en CI (cf. helm/saas-app/README.md, image de substitution
+  # tant que l'image applicative réelle n'est pas publiée).
+  helm-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.15.4"
+
+      - name: helm lint
+        working-directory: helm/saas-app
+        run: helm lint .
+
+      - name: helm template
+        working-directory: helm/saas-app
+        run: helm template saas-app . -f values.yaml

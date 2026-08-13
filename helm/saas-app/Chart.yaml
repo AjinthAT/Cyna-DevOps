@@ -1,0 +1,20 @@
+apiVersion: v2
+name: saas-app
+description: >-
+  Chart Helm pour l'application front-end SaaS CYNA déployée sur le cluster
+  k3s hébergé par SAAS-GE-01 (4 VM imbriquées, cf. CDC section 12.2 et plan
+  d'adressage section 10.5.1). Répond à l'exigence du sujet CYNA (section
+  Scripting, "Déploiement des conteneurs avec Docker/Kubernetes") d'utiliser
+  des Helm charts pour gérer les configurations des applications déployées
+  sur Kubernetes, avec scaling automatique des conteneurs en fonction de la
+  charge (voir templates/hpa.yaml).
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - cyna
+  - saas
+  - k3s
+maintainers:
+  - name: Ajinthan ARIYARASAN
+    email: ajin@furb.fr

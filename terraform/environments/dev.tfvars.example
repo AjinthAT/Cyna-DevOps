@@ -1,0 +1,13 @@
+# Développement / expérimentation individuelle (voir README.md de ce dossier).
+
+location            = "francecentral"
+resource_group_name = "RG-CYNA-DEV"
+environment         = "dev"
+
+key_vault_name               = "kv-cyna-dev-01"
+storage_account_name         = "stcynadev01"
+recovery_vault_name          = "rsv-cyna-dev"
+log_analytics_workspace_name = "law-cyna-dev"
+
+log_retention_days = 7 # réduite : environnement jetable, pas d'exigence de conservation longue durée
+enable_vpn_gateway = false

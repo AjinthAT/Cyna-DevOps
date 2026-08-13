@@ -27,3 +27,21 @@ groups:
         annotations:
           summary: "Espace disque faible"
           description: "Moins de 15% d’espace disque disponible sur {{ $labels.instance }}."
+
+      - alert: ServiceHttpDown
+        expr: probe_success == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service HTTP(S) indisponible"
+          description: "Le contrôle blackbox échoue pour {{ $labels.instance }} ({{ $labels.job }})."
+
+      - alert: ServiceSlowResponse
+        expr: probe_duration_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Temps de réponse HTTP(S) dégradé"
+          description: "{{ $labels.instance }} met plus de 2s à répondre depuis 5 minutes."

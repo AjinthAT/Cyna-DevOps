@@ -2,21 +2,7 @@
 
 ## Objectif
 
-La partie DevOps du projet CYNA vise à automatiser le déploiement, la supervision, l'alerting et la gestion des incidents de l'infrastructure.
-
-## Composants utilisés
-
-| Composant | Rôle |
-|---|---|
-| GitHub | Versionnement du code, des configurations et de la documentation |
-| Docker Compose | Déploiement de la stack de supervision |
-| Prometheus | Collecte des métriques |
-| Grafana | Visualisation des métriques via dashboards |
-| Alertmanager | Gestion et routage des alertes |
-| Node Exporter | Exposition des métriques système Linux |
-| Blackbox Exporter | Tests de disponibilité HTTP |
-| Shuffle | Orchestrateur SOAR, déclenche la création de tickets |
-| GLPI | Gestion des tickets d'incident (ITSM) |
+La partie DevOps du projet CYNA vise à automatiser le déploiement, la supervision, l'alerting et la gestion des incidents de l'infrastructure. Liste des composants et de leur rôle : voir `../README.md`, section « Stack utilisée ». Ce document se concentre sur la chaîne de supervision elle-même et son périmètre.
 
 ## Chaîne de supervision
 
@@ -50,13 +36,16 @@ Shuffle ouvre une session sur l'API GLPI et crée automatiquement le ticket d'in
        v
     GLPI (ticket)
 
-## Évolutions prévues
+## Périmètre de supervision
 
-Dans la maquette finale, la stack DevOps pourra superviser :
+Déjà couvert par `monitoring/prometheus/prometheus.yml` (voir
+`procedure-supervision.md` pour le détail par machine) : les VM Linux de
+l'infra Genève (SAAS-GE-01, APP-BACKEND-01, WAZUH-GE-01, BACKUP-GE-01), la
+disponibilité HTTP(S) de la plateforme SaaS et du dashboard Wazuh
+(SIEM/SOC), et les services internes de la VM DevOps elle-même.
 
-- le serveur GNS3 ;
-- les VMs Linux ;
-- la VM Web / SaaS ;
-- les services SIEM / SOC ;
-- les services d'administration ;
-- les équipements exposant des métriques ou des ports testables.
+Pas encore couvert : le serveur GNS3 lui-même (l'hôte qui exécute la
+maquette, distinct des VM qu'il héberge), les services d'administration
+Windows (AD-GE-01/02, FILE-GE-01 — nécessite `windows_exporter`, aucun
+playbook WinRM fourni à ce stade) et les équipements réseau (Sophos,
+switches) au-delà de leurs logs déjà remontés au SIEM.

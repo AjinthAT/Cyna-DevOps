@@ -1,0 +1,33 @@
+{{- if .Values.autoscaling.enabled }}
+# HorizontalPodAutoscaler : scaling automatique des conteneurs en fonction
+# de la charge CPU/mémoire (cf. sujet CYNA, section Scripting). Nécessite le
+# metrics-server, présent par défaut dans une installation k3s standard.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "saas-app.fullname" . }}
+  labels:
+    {{- include "saas-app.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "saas-app.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercent }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercent }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercent }}
+    {{- end }}
+{{- end }}

@@ -16,11 +16,57 @@ scrape_configs:
       - targets:
           - "localhost:9090"
 
+  # VM DevOps elle-même (MONITOR-GE-01, cf. plan d'adressage CDC section 10.5.1),
+  # celle qui héberge cette stack Docker Compose.
   - job_name: "devops-vm-node-exporter"
     static_configs:
       - targets:
           - "node-exporter:9100"
+        labels:
+          instance: MONITOR-GE-01
 
+  # ---------------------------------------------------------------------
+  # Machines Linux de la maquette Genève (cf. CDC section 10.5.1, plan
+  # d'adressage). Nécessite node_exporter installé sur chaque machine
+  # (voir ansible/playbooks/deploy-node-exporter.yml) : tant qu'il n'est
+  # pas déployé sur une cible, celle-ci apparaît "down" dans Prometheus
+  # (Status > Targets), ce qui est normal et attendu en cours de
+  # déploiement plutôt qu'une erreur de configuration.
+  # ---------------------------------------------------------------------
+  - job_name: "linux-node-exporter-infra"
+    static_configs:
+      - targets: ["10.10.40.10:9100"]
+        labels:
+          instance: SAAS-GE-01
+      - targets: ["10.10.45.10:9100"]
+        labels:
+          instance: APP-BACKEND-01
+      - targets: ["10.10.50.10:9100"]
+        labels:
+          instance: WAZUH-GE-01
+      - targets: ["10.10.60.10:9100"]
+        labels:
+          instance: BACKUP-GE-01
+
+  # ---------------------------------------------------------------------
+  # Machines Windows Server de la maquette Genève (AD, fichiers). Node
+  # Exporter ne fonctionne pas sous Windows : ces cibles nécessitent
+  # windows_exporter (port par défaut 9182), installé manuellement ou via
+  # un playbook WinRM dédié (non fourni ici, cf. docs/procedure-supervision.md).
+  # ---------------------------------------------------------------------
+  - job_name: "windows-exporter-infra"
+    static_configs:
+      - targets: ["10.10.30.10:9182"]
+        labels:
+          instance: AD-GE-01
+      - targets: ["10.10.30.11:9182"]
+        labels:
+          instance: AD-GE-02
+      - targets: ["10.10.30.20:9182"]
+        labels:
+          instance: FILE-GE-01
+
+  # Services HTTP internes à la stack DevOps (sans TLS).
   - job_name: "blackbox-http"
     metrics_path: /probe
     params:
@@ -29,10 +75,52 @@ scrape_configs:
       - targets:
           - "http://prometheus:9090"
           - "http://grafana:3000"
+          - "http://alertmanager:9093"
+          - "http://glpi"
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
       - source_labels: [__param_target]
         target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Disponibilité de la plateforme SaaS publiée en DMZ (LB-SAAS-01 /
+  # SAAS-GE-01, cf. CDC section 12.2 et 10.5.1).
+  - job_name: "blackbox-saas-site"
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets:
+          - "http://10.10.40.10"
+        labels:
+          instance: SAAS-GE-01
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      # __tmp_instance (plutôt que "instance") pour ne pas écraser le label
+      # instance=SAAS-GE-01 défini ci-dessus par l'URL brute sondée.
+      - source_labels: [__param_target]
+        target_label: __tmp_instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Dashboard Wazuh (HTTPS, certificat auto-signé côté maquette) :
+  # cf. CDC section 12.3 "SOC, SIEM et supervision sécurité".
+  - job_name: "blackbox-wazuh-dashboard"
+    metrics_path: /probe
+    params:
+      module: [http_2xx_insecure]
+    static_configs:
+      - targets:
+          - "https://10.10.50.10"
+        labels:
+          instance: WAZUH-GE-01
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: __tmp_instance
       - target_label: __address__
         replacement: blackbox-exporter:9115

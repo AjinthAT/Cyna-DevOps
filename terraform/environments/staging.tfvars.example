@@ -1,0 +1,15 @@
+# Pré-production : valider une évolution du module dans des conditions
+# proches de la démo avant de l'appliquer sur RG-CYNA-PROD (voir README.md
+# de ce dossier).
+
+location            = "francecentral"
+resource_group_name = "RG-CYNA-STAGING"
+environment         = "staging"
+
+key_vault_name               = "kv-cyna-staging-01"
+storage_account_name         = "stcynastaging01"
+recovery_vault_name          = "rsv-cyna-staging"
+log_analytics_workspace_name = "law-cyna-staging"
+
+log_retention_days = 30
+enable_vpn_gateway = false # à activer seulement pour tester le tunnel IPsec avant la démo

@@ -6,7 +6,7 @@ Ce repository contient la partie DevOps du projet CYNA.
 
 Il couvre :
 
-- automatisation ;
+- automatisation (déploiement, règles firewall Zero Trust) ;
 - supervision ;
 - alerting ;
 - gestion des incidents (Shuffle + GLPI) ;
@@ -25,18 +25,31 @@ Il couvre :
 - Blackbox Exporter ;
 - Shuffle (orchestrateur SOAR, hébergé à part) ;
 - GLPI + MariaDB (gestion des tickets ITSM) ;
-- Terraform / OpenTofu à venir.
+- Terraform (hub Azure : Resource Group, VNet, Key Vault, Log Analytics/Monitor, Recovery Services Vault, Storage Account) ;
+- Helm (déploiement et autoscaling de l'application SaaS sur le cluster k3s de SAAS-GE-01) ;
+- GitHub Actions (intégration continue : validation, test d'intégration, `terraform validate`, `helm lint`) ;
+- Sophos XGS (règles firewall Zero Trust pilotées par Ansible via l'API du firewall).
 
 ## Structure du repository
 
-    ansible/              Playbooks Ansible
+    ansible/              Playbooks Ansible (supervision, firewall Zero Trust — voir ansible/README.md)
     monitoring/           Stack Prometheus / Grafana / Alertmanager / GLPI
     shuffle/workflows/    Exports des workflows Shuffle (SOAR)
+    terraform/            Hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup, Storage)
+                            + environments/ (dev, staging, prod)
+    helm/saas-app/        Chart Helm pour l'application SaaS (cluster k3s, SAAS-GE-01)
     scripts/              Scripts de déploiement, sauvegarde et tests
     docs/                 Documentation technique
+    .github/workflows/    Pipeline CI/CD (GitHub Actions)
     .env.example          Modèle de variables d'environnement (accès GLPI)
 
-Le dossier `terraform/` n'existe pas encore dans ce repository : l'infrastructure Azure (Resource Group, VNet, Key Vault, Monitor, Backup) reste à implémenter.
+Le hub Azure (Resource Group, VNet, Key Vault, Monitor, Backup) est provisionné par le module dans `terraform/` — voir `terraform/README.md` pour l'utilisation, le multi-environnement, le statut (non encore appliqué sur un abonnement réel) et le coût. Le VPN site-à-site Azure y est désactivé par défaut (coût horaire, cf. `terraform/variables.tf`).
+
+Le chart Helm dans `helm/saas-app/` déploie l'application front-end SaaS sur le cluster k3s de `SAAS-GE-01` avec scaling automatique (HPA) — voir `helm/saas-app/README.md` pour l'utilisation et ses limites assumées (image applicative de substitution tant que l'image réelle n'est pas publiée).
+
+Les playbooks Ansible et la stratégie de tests retenue (validation + intégration plutôt que Molecule) sont détaillés dans `ansible/README.md`.
+
+Le pipeline CI/CD (`.github/workflows/ci.yml`) est détaillé, avec un diagramme de flux, dans `docs/architecture-cicd.md`.
 
 Shuffle lui-même n'est pas déployé depuis ce repository (installation Docker Swarm séparée sur la VM) : seul l'export de son workflow est versionné ici. Voir `docs/procedure-shuffle-glpi.md`.
 
@@ -98,8 +111,10 @@ Tester la création d'un ticket GLPI sans attendre une alerte réelle :
 La documentation détaillée est disponible dans `docs/` :
 
 - `architecture-devops.md` — vue d'ensemble de la chaîne DevOps ;
+- `architecture-cicd.md` — pipeline CI/CD GitHub Actions, avec diagramme de flux ;
 - `procedure-deploiement.md` — prérequis et déploiement de la stack ;
 - `procedure-supervision.md` — supervision Prometheus / Grafana ;
 - `procedure-shuffle-glpi.md` — automatisation des tickets GLPI via Shuffle ;
+- `procedure-firewall-automation.md` — matrice de flux Zero Trust et automatisation des règles Sophos via Ansible ;
 - `procedure-pra-pca.md` — sauvegarde et restauration de la stack DevOps ;
 - `integration-groupe.md` — intégration avec les autres périmètres du projet CYNA.

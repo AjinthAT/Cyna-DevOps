@@ -45,3 +45,53 @@
     - name: Afficher les conteneurs
       debug:
         var: docker_ps.stdout_lines
+
+    # ---------------------------------------------------------------------
+    # Tests de validation post-déploiement : le déploiement précédent
+    # (docker compose up -d) réussit même si un service crashe juste après
+    # ; on vérifie donc que chaque service répond réellement, pas seulement
+    # que la commande de déploiement n'a pas renvoyé d'erreur.
+    # ---------------------------------------------------------------------
+    - name: Attendre le démarrage des services
+      pause:
+        seconds: 15
+
+    - name: "Test de validation — Prometheus répond"
+      uri:
+        url: "http://localhost:9090/-/healthy"
+        status_code: 200
+      register: check_prometheus
+      retries: 5
+      delay: 5
+      until: check_prometheus.status == 200
+
+    - name: "Test de validation — Grafana répond"
+      uri:
+        url: "http://localhost:3000/api/health"
+        status_code: 200
+      register: check_grafana
+      retries: 5
+      delay: 5
+      until: check_grafana.status == 200
+
+    - name: "Test de validation — Alertmanager répond"
+      uri:
+        url: "http://localhost:9093/-/healthy"
+        status_code: 200
+      register: check_alertmanager
+      retries: 5
+      delay: 5
+      until: check_alertmanager.status == 200
+
+    - name: "Test de validation — GLPI répond"
+      uri:
+        url: "http://localhost:8080/"
+        status_code: 200
+      register: check_glpi
+      retries: 10
+      delay: 5
+      until: check_glpi.status == 200
+
+    - name: Résumé des tests de validation
+      debug:
+        msg: "Prometheus, Grafana, Alertmanager et GLPI répondent tous correctement : déploiement validé."

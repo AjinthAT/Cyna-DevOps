@@ -1,0 +1,125 @@
+---
+# Applique la matrice de flux Zero Trust sur les firewalls Sophos XGS
+# (Genève et Paris) via l'API XML de Sophos Firewall, à partir d'une source
+# de vérité déclarative (vars/firewall-zero-trust-<site>.yml).
+#
+# Une seule play, exécutée une fois par hôte du groupe [firewalls] : les
+# tâches sont identiques pour Genève et Paris, seuls les hôtes/vars changent
+# (firewall_site, credentials), donc pas besoin de deux plays dupliquées.
+#
+# Prérequis, fonctionnement détaillé et limites assumées :
+# voir ../../docs/procedure-firewall-automation.md.
+#
+# Usage :
+#   source .env.local
+#   ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-firewall-rules.yml
+
+- name: Appliquer la matrice de flux Zero Trust sur les firewalls Sophos
+  hosts: firewalls
+  connection: local
+  gather_facts: false
+
+  vars:
+    sophos_api_username: "{{ lookup('env', 'SOPHOS_' + firewall_site | upper + '_API_USER') }}"
+    sophos_api_password: "{{ lookup('env', 'SOPHOS_' + firewall_site | upper + '_API_PASSWORD') }}"
+
+  pre_tasks:
+    - name: "Charger la matrice de flux ({{ firewall_site }})"
+      include_vars: "vars/firewall-zero-trust-{{ firewall_site }}.yml"
+
+    - name: Vérifier que les identifiants API sont fournis
+      assert:
+        that:
+          - sophos_api_username | length > 0
+          - sophos_api_password | length > 0
+        fail_msg: >-
+          SOPHOS_{{ firewall_site | upper }}_API_USER / SOPHOS_{{ firewall_site | upper }}_API_PASSWORD
+          non définis. Créer .env.local à partir de .env.example, puis
+          'source .env.local' avant d'exécuter ce playbook.
+
+  tasks:
+    - name: "Récupérer les règles de filtrage déjà présentes ({{ firewall_site }})"
+      uri:
+        url: "https://{{ ansible_host }}:4444/webconsole/APIController"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          reqxml: |
+            <Request>
+              <Login>
+                <Username>{{ sophos_api_username }}</Username>
+                <Password>{{ sophos_api_password }}</Password>
+              </Login>
+              <Get><FirewallRule></FirewallRule></Get>
+            </Request>
+        validate_certs: false
+        return_content: true
+        status_code: [200]
+      register: existing_rules
+      retries: 3
+      delay: 5
+      until: existing_rules.status == 200
+
+    - name: "Créer ou mettre à jour chaque règle de la matrice de flux ({{ firewall_site }})"
+      uri:
+        url: "https://{{ ansible_host }}:4444/webconsole/APIController"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          reqxml: "{{ lookup('template', 'templates/sophos-firewall-rule.xml.j2') }}"
+        validate_certs: false
+        return_content: true
+        status_code: [200]
+      loop: "{{ firewall_rules }}"
+      loop_control:
+        loop_var: rule
+        label: "{{ rule.name }}"
+      vars:
+        operation: "{{ 'update' if (rule.name in existing_rules.content) else 'add' }}"
+      register: rule_apply
+      retries: 3
+      delay: 5
+      until: >-
+        rule_apply.status == 200 and
+        ('Configuration applied successfully' in rule_apply.content
+         or 'already exists' in rule_apply.content)
+
+    # ---------------------------------------------------------------------
+    # Test de validation post-application : comme pour
+    # deploy-monitoring.yml/deploy-node-exporter.yml, on ne se contente pas
+    # d'un code HTTP 200 — on relit la configuration et on vérifie que
+    # chaque règle déclarée y apparaît bien.
+    # ---------------------------------------------------------------------
+    - name: "Relire la configuration pour validation ({{ firewall_site }})"
+      uri:
+        url: "https://{{ ansible_host }}:4444/webconsole/APIController"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          reqxml: |
+            <Request>
+              <Login>
+                <Username>{{ sophos_api_username }}</Username>
+                <Password>{{ sophos_api_password }}</Password>
+              </Login>
+              <Get><FirewallRule></FirewallRule></Get>
+            </Request>
+        validate_certs: false
+        return_content: true
+        status_code: [200]
+      register: final_rules
+
+    - name: "Test de validation — chaque règle de la matrice est bien appliquée ({{ firewall_site }})"
+      assert:
+        that:
+          - rule.name in final_rules.content
+        fail_msg: "La règle '{{ rule.name }}' n'apparaît pas dans la configuration Sophos {{ firewall_site }} après application."
+        success_msg: "Règle '{{ rule.name }}' confirmée sur Sophos {{ firewall_site }}."
+      loop: "{{ firewall_rules }}"
+      loop_control:
+        loop_var: rule
+        label: "{{ rule.name }}"
+
+    - name: "Résumé ({{ firewall_site }})"
+      debug:
+        msg: "{{ firewall_rules | length }} règle(s) de la matrice de flux Zero Trust appliquées et vérifiées sur Sophos {{ firewall_site }}."
