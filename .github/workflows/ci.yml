@@ -30,6 +30,7 @@ jobs:
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/check-linux.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-monitoring.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-node-exporter.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-firewall-rules.yml --syntax-check
 
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck

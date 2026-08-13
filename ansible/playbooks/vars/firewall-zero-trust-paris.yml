@@ -1,0 +1,53 @@
+---
+# -----------------------------------------------------------------------
+# Matrice de flux — Sophos Paris.
+#
+# Même principe que firewall-zero-trust-geneve.yml (voir ce fichier pour le
+# détail des hypothèses assumées : zones Sophos = noms des VLANs du CDC,
+# section 10.3, services personnalisés supposés déjà créés). Paris est un
+# site plus petit (3 VLANs : ADMIN-PARIS, USERS-PARIS, GUEST-PARIS) sans
+# ressources locales à protéger au-delà de l'administration et des postes
+# utilisateurs — l'authentification et les serveurs applicatifs restent
+# côté Genève, via le tunnel VPN (SEC-FW-05).
+# -----------------------------------------------------------------------
+
+firewall_rules:
+  - name: "ADMIN-to-ALL-admin"
+    source_zone: "ADMIN-PARIS"
+    dest_zone: "Any"
+    services: ["HTTPS", "SSH", "RDP"]
+    log_traffic: true
+    description: "Postes d'administration locaux (ADMIN-PARIS) vers toutes les zones du site Paris."
+
+  # Les utilisateurs Paris s'authentifient sur l'AD Genève via le VPN.
+  - name: "USERS-to-VPN-addc"
+    source_zone: "USERS-PARIS"
+    dest_zone: "VPN"
+    services: ["AD-DS"]
+    log_traffic: true
+    description: "Authentification/DNS des postes Paris vers AD-GE-01/02 (Genève), via le tunnel VPN (SEC-FW-05)."
+
+  # Accès à la plateforme SaaS (hébergée à Genève) via le VPN.
+  - name: "USERS-to-VPN-saas"
+    source_zone: "USERS-PARIS"
+    dest_zone: "VPN"
+    services: ["HTTPS"]
+    log_traffic: true
+    description: "Accès des postes Paris à la plateforme SaaS (SAAS-GE-01), via le tunnel VPN."
+
+  # Supervision : les agents Wazuh de Paris remontent vers WAZUH-GE-01
+  # (Genève) via le VPN.
+  - name: "ALL-to-VPN-wazuh-agents"
+    source_zone: "Any"
+    dest_zone: "VPN"
+    services: ["MONITORING"]
+    log_traffic: false
+    description: "Agents Wazuh du site Paris vers WAZUH-GE-01, via le tunnel VPN (SEC-FW-03)."
+
+  # Wi-Fi invité Paris : Internet uniquement (SEC-FW-01), identique à Genève.
+  - name: "GUEST-to-WAN-only"
+    source_zone: "GUEST-PARIS"
+    dest_zone: "WAN"
+    services: ["HTTP", "HTTPS", "DNS"]
+    log_traffic: false
+    description: "Wi-Fi invité Paris : accès Internet uniquement, aucune règle vers ADMIN-PARIS/USERS-PARIS ni vers le VPN."

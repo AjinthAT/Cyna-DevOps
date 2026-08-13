@@ -1,0 +1,42 @@
+{#
+  Gabarit de requête XML pour l'API Sophos Firewall (SFOS), entité
+  FirewallRule. Basé sur le schéma XML documenté par Sophos pour
+  APIController (POST https://<firewall>:4444/webconsole/APIController,
+  champ de formulaire "reqxml").
+
+  operation vaut "add" (règle inexistante) ou "update" (règle déjà
+  présente, cf. deploy-firewall-rules.yml qui fait un Get préalable pour
+  décider) — permet de rejouer le playbook sans dupliquer les règles
+  (idempotence).
+#}
+<Request>
+  <Login>
+    <Username>{{ sophos_api_username }}</Username>
+    <Password>{{ sophos_api_password }}</Password>
+  </Login>
+  <Set operation="{{ operation }}">
+    <FirewallRule>
+      <Name>{{ rule.name }}</Name>
+      <Description>{{ rule.description }}</Description>
+      <IPFamily>IPv4</IPFamily>
+      <Status>Enable</Status>
+      <Position>Top</Position>
+      <PolicyType>Network</PolicyType>
+      <NetworkPolicy>
+        <Action>Accept</Action>
+        <LogTraffic>{{ 'Enable' if rule.log_traffic else 'Disable' }}</LogTraffic>
+        <SourceZones>
+          <Zone>{{ rule.source_zone }}</Zone>
+        </SourceZones>
+        <DestinationZones>
+          <Zone>{{ rule.dest_zone }}</Zone>
+        </DestinationZones>
+        <Services>
+          {% for svc in rule.services %}
+          <Service>{{ svc }}</Service>
+          {% endfor %}
+        </Services>
+      </NetworkPolicy>
+    </FirewallRule>
+  </Set>
+</Request>

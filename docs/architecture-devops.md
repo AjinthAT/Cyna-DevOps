@@ -17,6 +17,10 @@ La partie DevOps du projet CYNA vise à automatiser le déploiement, la supervis
 | Blackbox Exporter | Tests de disponibilité HTTP |
 | Shuffle | Orchestrateur SOAR, déclenche la création de tickets |
 | GLPI | Gestion des tickets d'incident (ITSM) |
+| Ansible | Déploiement/validation des services Linux et automatisation des règles firewall Sophos (Zero Trust, voir `procedure-firewall-automation.md`) |
+| Terraform | Provisioning du hub Azure (RG, VNet, Key Vault, Monitor, Backup, Storage), multi-environnement (voir `terraform/README.md`) |
+| Helm | Déploiement et autoscaling de l'application SaaS sur le cluster k3s (voir `helm/saas-app/README.md`) |
+| Sophos XGS | Firewalls Genève/Paris, règles pilotées par API depuis Ansible |
 
 ## Chaîne de supervision
 
