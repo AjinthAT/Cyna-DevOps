@@ -10,6 +10,7 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+# shellcheck source=/dev/null
 source "$ENV_FILE"
 
 if [ -z "${GLPI_URL:-}" ] || [ -z "${GLPI_APP_TOKEN:-}" ] || [ -z "${GLPI_USER_TOKEN:-}" ]; then
