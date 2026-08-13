@@ -1,36 +1,14 @@
 ---
-# -----------------------------------------------------------------------
-# Matrice de flux — Sophos Genève.
+# Matrice de flux — Sophos Genève : source de vérité unique pour les règles
+# de filtrage inter-VLAN. Modifier cette liste puis rejouer
+# deploy-firewall-rules.yml pour appliquer le changement.
 #
-# Source de vérité unique pour les règles de filtrage inter-VLAN de Sophos
-# Genève : modifier cette liste puis rejouer
-# ansible/playbooks/deploy-firewall-rules.yml pour appliquer le changement
-# (cf. sujet CYNA : "les scripts doivent être capables d'appliquer des
-# politiques de sécurité Zero Trust et de les mettre à jour dynamiquement
-# selon les besoins du réseau").
+# Posture Zero Trust : toute communication inter-VLAN non listée ici reste
+# bloquée par défaut (déni implicite entre zones SFOS, SEC-FW-01) — chaque
+# entrée est une exception motivée, pas une liste de blocages.
 #
-# Posture Zero Trust : SFOS (Sophos Firewall OS) applique un déni implicite
-# entre zones de sécurité tant qu'aucune règle "Accept" ne l'autorise
-# explicitement — chaque entrée ci-dessous est donc une exception motivée,
-# pas une liste de blocages. Toute communication inter-VLAN non listée ici
-# reste bloquée par défaut (cf. CDC section 9, exigence SEC-FW-01).
-#
-# Hypothèse assumée (à valider avant exécution réelle) : les zones Sophos
-# portent le même nom que la colonne "Nom" des VLANs du CDC (section 10.2 :
-# MGMT-GE, USERS-GE, SERVERS-GE, DMZ-SAAS, BACKEND-APP, SOC-MONITORING,
-# BACKUP-PRA, WIFI-CORP, WIFI-GUEST) et sont déjà créées côté Sophos — la
-# création des zones elles-mêmes (association zone <-> VLAN/interface) est
-# une opération réseau préalable, hors du périmètre de ce playbook.
-#
-# services_custom : objets "Service" Sophos supposés déjà créés (groupes de
-# ports), faute de pouvoir les provisionner nous-mêmes via ce même appel API
-# dans une première itération. Documentés ici pour qu'ils soient créés une
-# fois manuellement (Objects > Services) avant la première exécution :
-#   - AD-DS       : TCP/UDP 53 (DNS), 88 (Kerberos), 389/3268 (LDAP), 445 (SMB)
-#   - MONITORING  : TCP 9100 (Node Exporter), 9115 (Blackbox), 1514-1515 (Wazuh agent)
-#   - SAAS-API    : TCP 443 (à ajuster si l'API interne APP-BACKEND-01 utilise
-#                   un autre port : non détaillé à ce stade, cf. CDC section 12.2)
-# -----------------------------------------------------------------------
+# Prérequis (zones/services Sophos à créer au préalable) et hypothèses
+# assumées : voir ../../../docs/procedure-firewall-automation.md.
 
 firewall_rules:
   # SEC-FW-01 : accès d'administration limité au VLAN MGMT (cf. CDC section
