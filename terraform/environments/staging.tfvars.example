@@ -1,26 +1,15 @@
-# Environnement de pré-production : sert à valider une évolution du module
-# dans des conditions proches de la démo finale (mêmes types de ressources,
-# mêmes durées de rétention) avant de l'appliquer sur RG-CYNA-PROD.
-#
-# Modèle versionné (".example", cf. .gitignore qui exclut tous les *.tfvars) :
-#   cp environments/staging.tfvars.example environments/staging.tfvars
-#
-# Utilisation :
-#   terraform plan  -var-file=environments/staging.tfvars -state=environments/staging.tfstate
-#   terraform apply -var-file=environments/staging.tfvars -state=environments/staging.tfstate
+# Pré-production : valider une évolution du module dans des conditions
+# proches de la démo avant de l'appliquer sur RG-CYNA-PROD (voir README.md
+# de ce dossier).
 
 location            = "francecentral"
 resource_group_name = "RG-CYNA-STAGING"
 environment         = "staging"
 
-key_vault_name                = "kv-cyna-staging-01"
-storage_account_name          = "stcynastaging01"
-recovery_vault_name           = "rsv-cyna-staging"
-log_analytics_workspace_name  = "law-cyna-staging"
+key_vault_name               = "kv-cyna-staging-01"
+storage_account_name         = "stcynastaging01"
+recovery_vault_name          = "rsv-cyna-staging"
+log_analytics_workspace_name = "law-cyna-staging"
 
 log_retention_days = 30
-
-# Laissé à false comme en prod par défaut : à activer explicitement
-# uniquement si le tunnel IPsec doit être testé avant la démo (cf.
-# terraform/README.md, section "Activer le VPN site-à-site").
-enable_vpn_gateway = false
+enable_vpn_gateway = false # à activer seulement pour tester le tunnel IPsec avant la démo

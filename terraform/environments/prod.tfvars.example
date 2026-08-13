@@ -1,29 +1,15 @@
-# Environnement de démonstration / soutenance (équivalent du "prod" pour ce
-# projet étudiant). Reprend les valeurs par défaut de variables.tf, mais
-# explicitement dans un fichier -var-file pour rester cohérent avec dev.tfvars
-# et staging.tfvars et permettre le même processus de rollback (voir
-# README.md, sections "Multi-environnement" et "Rollback et journalisation").
-#
-# Modèle versionné (".example", cf. .gitignore qui exclut tous les *.tfvars) :
-#   cp environments/prod.tfvars.example environments/prod.tfvars
-#
-# Utilisation :
-#   terraform plan  -var-file=environments/prod.tfvars -state=environments/prod.tfstate
-#   terraform apply -var-file=environments/prod.tfvars -state=environments/prod.tfstate
-#
-# key_vault_name et storage_account_name DOIVENT être uniques au niveau
-# mondial sur Azure : personnaliser avant tout apply réel (cf.
-# terraform.tfvars.example).
+# Démonstration / soutenance (voir README.md de ce dossier). key_vault_name
+# et storage_account_name DOIVENT être uniques au niveau mondial sur Azure :
+# personnaliser avant tout apply réel.
 
 location            = "francecentral"
 resource_group_name = "RG-CYNA-PROD"
 environment         = "prod"
 
-key_vault_name                = "kv-cyna-prod-01"
-storage_account_name          = "stcynaprod01"
-recovery_vault_name           = "rsv-cyna-prod"
-log_analytics_workspace_name  = "law-cyna-prod"
+key_vault_name               = "kv-cyna-prod-01"
+storage_account_name         = "stcynaprod01"
+recovery_vault_name          = "rsv-cyna-prod"
+log_analytics_workspace_name = "law-cyna-prod"
 
 log_retention_days = 30
-
 enable_vpn_gateway = false

@@ -1,33 +1,13 @@
-# Environnement de développement / expérimentation individuelle.
-# Objectif : pouvoir tester une évolution du module (nouvelle règle Monitor,
-# nouvelle politique de backup...) sans toucher aux ressources "prod" de la
-# démo, ni risquer de casser l'environnement présenté en soutenance.
-#
-# Le dépôt exclut tous les *.tfvars (cf. .gitignore, racine du dépôt) : ce
-# fichier est donc un modèle ".example" versionné, comme
-# terraform.tfvars.example. Copier avant utilisation :
-#   cp environments/dev.tfvars.example environments/dev.tfvars
-#
-# Utilisation :
-#   terraform plan  -var-file=environments/dev.tfvars -state=environments/dev.tfstate
-#   terraform apply -var-file=environments/dev.tfvars -state=environments/dev.tfstate
-#
-# (cf. README.md, section "Multi-environnement" pour le détail de l'isolation
-# des états et l'alternative avec un backend distant / des workspaces Terraform)
+# Développement / expérimentation individuelle (voir README.md de ce dossier).
 
 location            = "francecentral"
 resource_group_name = "RG-CYNA-DEV"
 environment         = "dev"
 
-key_vault_name                = "kv-cyna-dev-01"
-storage_account_name          = "stcynadev01"
-recovery_vault_name           = "rsv-cyna-dev"
-log_analytics_workspace_name  = "law-cyna-dev"
+key_vault_name               = "kv-cyna-dev-01"
+storage_account_name         = "stcynadev01"
+recovery_vault_name          = "rsv-cyna-dev"
+log_analytics_workspace_name = "law-cyna-dev"
 
-# Rétention réduite en dev : moins de coût, pas d'exigence de conservation
-# longue durée sur un environnement jetable.
-log_retention_days = 7
-
-# Jamais de VPN Gateway en dev (coût horaire, cf. terraform/README.md) : les
-# tests réseau se font uniquement sur les ressources du hub (VNet, subnets).
+log_retention_days = 7 # réduite : environnement jetable, pas d'exigence de conservation longue durée
 enable_vpn_gateway = false
