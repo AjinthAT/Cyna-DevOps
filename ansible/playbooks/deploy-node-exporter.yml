@@ -75,6 +75,25 @@
         state: started
         daemon_reload: true
 
+    # -----------------------------------------------------------------
+    # Test de validation post-déploiement : "enabled + started" côté
+    # systemd ne garantit pas que le binaire répond réellement (crash au
+    # démarrage, mauvais port, etc.) — on vérifie donc l'endpoint HTTP lui
+    # même, en local sur la machine cible.
+    # -----------------------------------------------------------------
+    - name: "Test de validation — Node Exporter répond sur /metrics"
+      uri:
+        url: "http://localhost:9100/metrics"
+        status_code: 200
+      register: check_node_exporter
+      retries: 5
+      delay: 3
+      until: check_node_exporter.status == 200
+
+    - name: Résumé du test de validation
+      debug:
+        msg: "Node Exporter répond correctement sur {{ inventory_hostname }}:9100 : déploiement validé."
+
     - name: Rappel du port à ouvrir côté firewall Sophos
       debug:
         msg: >
