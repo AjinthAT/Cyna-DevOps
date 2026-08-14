@@ -81,12 +81,15 @@
         --resource-name {{ inventory_hostname }}
       when: >-
         azcmagent_status.rc != 0 or
-        '"Status": "Connected"' not in azcmagent_status.stdout
+        (azcmagent_status.stdout | from_json).status | default('') != 'Connected'
 
     # -----------------------------------------------------------------
     # Test de validation post-déploiement, même principe que les autres
     # playbooks de ce dépôt : on ne se fie pas au code de sortie de
-    # `connect`, on relit l'état réel de l'agent après coup.
+    # `connect`, on relit l'état réel de l'agent après coup. La clé JSON
+    # "status" (cf. `azcmagent show status` dans la référence CLI officielle)
+    # est parsée via from_json plutôt que par un test de sous-chaîne sur le
+    # texte brut, plus robuste à la mise en forme exacte de la sortie.
     # -----------------------------------------------------------------
     - name: Relire l'état de l'agent après connexion
       command: azcmagent show --json
@@ -96,7 +99,7 @@
     - name: "Test de validation — {{ inventory_hostname }} est bien Connected"
       assert:
         that:
-          - "'\"Status\": \"Connected\"' in azcmagent_final.stdout"
+          - (azcmagent_final.stdout | from_json).status == 'Connected'
         fail_msg: "{{ inventory_hostname }} n'apparaît pas comme Connected dans Azure Arc après la tentative d'enregistrement."
         success_msg: "{{ inventory_hostname }} confirmé Connected dans Azure Arc (Resource Group {{ arc_resource_group }})."
 
