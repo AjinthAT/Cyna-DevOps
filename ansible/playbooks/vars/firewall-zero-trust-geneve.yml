@@ -12,7 +12,7 @@
 
 firewall_rules:
   # SEC-FW-01 : accès d'administration limité au VLAN MGMT (cf. CDC section
-  # 10.5.4, "accès d'administration limités au VLAN MGMT ou aux postes
+  # 11.1, "accès d'administration limités au VLAN MGMT ou aux postes
   # autorisés").
   - name: "MGMT-to-ALL-admin"
     source_zone: "MGMT-GE"

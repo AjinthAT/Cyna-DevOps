@@ -21,7 +21,7 @@ La liste des flux autorisés vit dans deux fichiers, un par site :
 
 Chaque entrée décrit un flux (zone source, zone destination, services,
 description, journalisation) et référence l'exigence du CDC qu'elle couvre
-(SEC-FW-01 à SEC-FW-05, section 9). C'est la **source de vérité unique** :
+(SEC-FW-01 à SEC-FW-05, section 11.2). C'est la **source de vérité unique** :
 mettre à jour une politique Zero Trust signifie éditer cette liste, pas se
 connecter à l'interface web de Sophos.
 
