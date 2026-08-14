@@ -51,8 +51,9 @@ scrape_configs:
   # ---------------------------------------------------------------------
   # Machines Windows Server de la maquette Genève (AD, fichiers). Node
   # Exporter ne fonctionne pas sous Windows : ces cibles nécessitent
-  # windows_exporter (port par défaut 9182), installé manuellement ou via
-  # un playbook WinRM dédié (non fourni ici, cf. docs/procedure-supervision.md).
+  # windows_exporter (port 9182), installé via
+  # ansible/playbooks/deploy-windows-exporter.yml (WinRM), cf.
+  # docs/procedure-supervision.md.
   # ---------------------------------------------------------------------
   - job_name: "windows-exporter-infra"
     static_configs:

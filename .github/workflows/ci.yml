@@ -25,6 +25,11 @@ jobs:
       - name: Install Ansible
         run: pipx install ansible-core
 
+      - name: Install Ansible collections
+        run: |
+          pipx inject ansible-core pywinrm
+          ansible-galaxy collection install -r ansible/requirements.yml
+
       - name: Check Ansible playbooks syntax
         run: |
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/check-linux.yml --syntax-check
@@ -34,6 +39,7 @@ jobs:
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/backup-firewall-config.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/onboard-azure-arc.yml --syntax-check
           ansible-playbook -i ansible/inventory.ini ansible/playbooks/patch-management.yml --syntax-check
+          ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-windows-exporter.yml --syntax-check
 
       - name: Install ShellCheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck

@@ -21,6 +21,7 @@ autre que celui qui a construit le lot DevOps.
 |---|---|---|
 | Stack de supervision | `ansible-playbook ansible/playbooks/deploy-monitoring.yml` | Tests `uri` intégrés passent (Prometheus, Grafana, Alertmanager, GLPI) |
 | Node Exporter infra | `ansible-playbook ansible/playbooks/deploy-node-exporter.yml` | Test `uri` intégré passe (`/metrics` sur le port 9100) ; cible visible dans Prometheus (`procedure-supervision.md`) |
+| windows_exporter infra | `ansible-playbook ansible/playbooks/deploy-windows-exporter.yml` | Test `win_uri` intégré passe (`/metrics` sur le port 9182) ; AD-GE-01/02 et FILE-GE-01 visibles dans Prometheus |
 | Firewall Zero Trust | `ansible-playbook ansible/playbooks/deploy-firewall-rules.yml` | Chaque règle de la matrice confirmée présente côté Sophos (assert intégré, voir `procedure-firewall-automation.md`) |
 | Sauvegarde config firewall | `ansible-playbook ansible/playbooks/backup-firewall-config.yml` | Export daté non vide, contenant au moins une balise `<FirewallRule>` |
 | Azure Arc | `ansible-playbook ansible/playbooks/onboard-azure-arc.yml` (après `terraform apply` réel) | Machine confirmée `Connected` (assert intégré) |
@@ -58,5 +59,9 @@ externes au lot DevOps :
 - `deploy-firewall-rules.yml`/`backup-firewall-config.yml` non exécutés
   contre un vrai firewall Sophos dans cet environnement de rédaction — à
   valider sur la maquette GNS3 avant la démonstration finale ;
+- `deploy-windows-exporter.yml` non exécuté contre un vrai serveur
+  Windows dans cet environnement de rédaction, et suppose WinRM déjà
+  activé côté AD-GE-01/02 et FILE-GE-01 (hors périmètre Ansible — GPO du
+  domaine ou script manuel, à la charge de l'administration AD) ;
 - Shuffle lui-même (SOAR) tourne sur une pile Docker Swarm séparée, non
   redéployée par ce dépôt (seul l'export du workflow y est versionné).

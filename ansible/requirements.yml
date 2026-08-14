@@ -1,0 +1,9 @@
+---
+# Collections requises en plus d'ansible-core, pour la gestion des cibles
+# Windows (ansible/playbooks/deploy-windows-exporter.yml).
+#
+# Installation :
+#   ansible-galaxy collection install -r ansible/requirements.yml
+collections:
+  - name: ansible.windows
+  - name: community.windows

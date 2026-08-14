@@ -11,8 +11,19 @@
 | `playbooks/backup-firewall-config.yml` | `[firewalls]` | Sauvegarde datée des règles de filtrage Sophos (voir `../docs/procedure-firewall-automation.md`) |
 | `playbooks/onboard-azure-arc.yml` | `[infra_linux]` | Enregistrement des serveurs Genève dans Azure Arc (voir `../terraform/README.md`, ressource non couverte par Terraform) |
 | `playbooks/patch-management.yml` | `[linux]` | Mises à jour de sécurité APT avec rapport tracé par exécution (CDC section 19.1) |
+| `playbooks/deploy-windows-exporter.yml` | `[infra_windows]` | Installation de windows_exporter (WinRM) sur l'infra Windows Genève + test de validation `/metrics` |
 
-Groupes d'inventaire : voir `inventory.ini`. `[infra_windows]` (AD, fichiers) n'est pas couvert par des playbooks à ce stade (nécessite WinRM, non configuré).
+Groupes d'inventaire : voir `inventory.ini`.
+
+## Prérequis pour les cibles Windows
+
+`deploy-windows-exporter.yml` nécessite deux collections en plus d'ansible-core, déclarées dans `requirements.yml` :
+
+```bash
+ansible-galaxy collection install -r ansible/requirements.yml
+```
+
+Il nécessite aussi la bibliothèque Python `pywinrm` côté machine qui exécute Ansible (`pip install pywinrm`), et que WinRM soit déjà activé côté Windows (script `ConfigureRemotingForAnsible.ps1` de Microsoft ou GPO du domaine) — Ansible ne peut pas activer WinRM à distance sur une machine qui ne l'a pas déjà, cette étape reste donc manuelle, hors périmètre de ce dépôt.
 
 ## Stratégie de tests
 
