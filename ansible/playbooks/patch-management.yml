@@ -1,0 +1,74 @@
+---
+# Applique les mises à jour de sécurité disponibles sur les machines Linux
+# du parc (CDC section 19.1, "Conditions d'exploitation" : "Mises à jour =
+# Ansible / procédures — Patch management traçable").
+#
+# "Traçable" ici veut dire : chaque exécution consigne, sur la machine
+# cible, la liste des paquets réellement mis à jour et la date — pas
+# seulement "apt upgrade a été lancé", ce qui suffirait à masquer une
+# mise à jour qui ne trouve rien à faire.
+#
+# Usage :
+#   ansible-playbook -i ansible/inventory.ini ansible/playbooks/patch-management.yml
+
+- name: Appliquer les mises à jour de sécurité sur le parc Linux
+  hosts: linux
+  become: true
+
+  vars:
+    patch_log_dir: /var/log/cyna-patch-management
+
+  tasks:
+    - name: Mettre à jour le cache APT
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Lister les paquets pouvant être mis à niveau (avant)
+      command: apt list --upgradable
+      register: upgradable_before
+      changed_when: false
+
+    - name: Appliquer les mises à jour disponibles
+      apt:
+        upgrade: safe
+      register: apt_upgrade_result
+
+    - name: Vérifier si un redémarrage est requis
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required
+
+    - name: Créer le répertoire de journalisation du patch management
+      file:
+        path: "{{ patch_log_dir }}"
+        state: directory
+        mode: "0750"
+
+    # -----------------------------------------------------------------
+    # Test de validation / traçabilité : on consigne le résultat réel
+    # (paquets mis à niveau, besoin de redémarrage) plutôt que de se fier
+    # au seul code de sortie du module apt, qui renvoie "ok" aussi bien
+    # quand des paquets ont été mis à jour que quand il n'y avait rien à
+    # faire.
+    # -----------------------------------------------------------------
+    - name: Consigner le rapport de patch management
+      copy:
+        dest: "{{ patch_log_dir }}/patch-{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}.log"
+        mode: "0640"
+        content: |
+          Hôte : {{ inventory_hostname }}
+          Date : {{ lookup('pipe', 'date -Iseconds') }}
+          Paquets mis à niveau : {{ apt_upgrade_result.changed }}
+          Redémarrage requis : {{ reboot_required.stat.exists }}
+
+          Paquets upgradable avant exécution :
+          {{ upgradable_before.stdout }}
+
+    - name: Résumé du patch management
+      debug:
+        msg: >-
+          {{ inventory_hostname }} : mises à jour appliquées
+          ({{ 'des paquets ont été mis à niveau' if apt_upgrade_result.changed else 'déjà à jour' }}).
+          Redémarrage requis : {{ reboot_required.stat.exists }}.
+          Rapport consigné dans {{ patch_log_dir }}.

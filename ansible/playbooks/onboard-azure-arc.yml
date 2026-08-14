@@ -1,0 +1,105 @@
+---
+# Enregistre les serveurs Linux de l'infra Genève dans Azure Arc (Connected
+# Machine agent), pour qu'ils remontent dans le Log Analytics Workspace
+# provisionné par terraform/monitor.tf (cf. CDC section 16, ressource
+# "Azure Arc" ; terraform/monitor.tf documente déjà que cet onboarding
+# n'est PAS un objet Terraform — un agent installé machine par machine,
+# c'est précisément ce que fait ce playbook).
+#
+# Réutilise les mêmes identifiants de service principal que Terraform
+# (ARM_CLIENT_ID / ARM_CLIENT_SECRET / ARM_TENANT_ID / ARM_SUBSCRIPTION_ID) :
+# le principal qui provisionne le hub Azure est aussi celui qui enregistre
+# les machines qui s'y rattachent.
+#
+# Non testé en conditions réelles : comme pour deploy-firewall-rules.yml,
+# ce playbook n'a pas pu être exécuté contre un abonnement Azure réel dans
+# cet environnement de rédaction (voir CDC section 9, risques —
+# "Automatisation IaC non validée en conditions réelles"). À valider une
+# fois `terraform apply` réellement joué sur l'abonnement Azure étudiant.
+#
+# Usage :
+#   source .env.local
+#   ansible-playbook -i ansible/inventory.ini ansible/playbooks/onboard-azure-arc.yml
+
+- name: Enregistrer les serveurs Genève dans Azure Arc
+  hosts: infra_linux
+  become: true
+
+  vars:
+    arc_resource_group: "RG-CYNA-PROD"
+    arc_location: "francecentral"
+    arc_client_id: "{{ lookup('env', 'ARM_CLIENT_ID') }}"
+    arc_client_secret: "{{ lookup('env', 'ARM_CLIENT_SECRET') }}"
+    arc_tenant_id: "{{ lookup('env', 'ARM_TENANT_ID') }}"
+    arc_subscription_id: "{{ lookup('env', 'ARM_SUBSCRIPTION_ID') }}"
+
+  pre_tasks:
+    - name: Vérifier que les identifiants du service principal sont fournis
+      assert:
+        that:
+          - arc_client_id | length > 0
+          - arc_client_secret | length > 0
+          - arc_tenant_id | length > 0
+          - arc_subscription_id | length > 0
+        fail_msg: >-
+          ARM_CLIENT_ID / ARM_CLIENT_SECRET / ARM_TENANT_ID / ARM_SUBSCRIPTION_ID
+          non définis. Créer .env.local à partir de .env.example, puis
+          'source .env.local' avant d'exécuter ce playbook.
+
+  tasks:
+    - name: Vérifier si l'agent Azure Connected Machine est déjà installé
+      stat:
+        path: /opt/azcmagent/bin/azcmagent
+      register: azcmagent_bin
+
+    - name: Télécharger le script d'installation de l'agent Azure Arc
+      get_url:
+        url: https://aka.ms/azcmagent
+        dest: /tmp/install_arc_agent.sh
+        mode: "0755"
+      when: not azcmagent_bin.stat.exists
+
+    - name: Installer l'agent Azure Connected Machine
+      command: bash /tmp/install_arc_agent.sh
+      when: not azcmagent_bin.stat.exists
+
+    - name: Vérifier si la machine est déjà connectée à Azure Arc
+      command: azcmagent show --json
+      register: azcmagent_status
+      changed_when: false
+      failed_when: false
+
+    - name: "Connecter {{ inventory_hostname }} à Azure Arc"
+      command: >-
+        azcmagent connect
+        --service-principal-id {{ arc_client_id }}
+        --service-principal-secret {{ arc_client_secret }}
+        --tenant-id {{ arc_tenant_id }}
+        --subscription-id {{ arc_subscription_id }}
+        --resource-group {{ arc_resource_group }}
+        --location {{ arc_location }}
+        --resource-name {{ inventory_hostname }}
+      when: >-
+        azcmagent_status.rc != 0 or
+        '"Status": "Connected"' not in azcmagent_status.stdout
+
+    # -----------------------------------------------------------------
+    # Test de validation post-déploiement, même principe que les autres
+    # playbooks de ce dépôt : on ne se fie pas au code de sortie de
+    # `connect`, on relit l'état réel de l'agent après coup.
+    # -----------------------------------------------------------------
+    - name: Relire l'état de l'agent après connexion
+      command: azcmagent show --json
+      register: azcmagent_final
+      changed_when: false
+
+    - name: "Test de validation — {{ inventory_hostname }} est bien Connected"
+      assert:
+        that:
+          - "'\"Status\": \"Connected\"' in azcmagent_final.stdout"
+        fail_msg: "{{ inventory_hostname }} n'apparaît pas comme Connected dans Azure Arc après la tentative d'enregistrement."
+        success_msg: "{{ inventory_hostname }} confirmé Connected dans Azure Arc (Resource Group {{ arc_resource_group }})."
+
+    - name: Résumé
+      debug:
+        msg: "{{ inventory_hostname }} enregistré et vérifié dans Azure Arc, Resource Group {{ arc_resource_group }}."

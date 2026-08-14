@@ -24,7 +24,7 @@ flowchart TD
     subgraph B["Job: validate"]
         B1["docker compose config<br/>(monitoring/docker-compose.yml)"]
         B2["promtool check config + check rules<br/>(Prometheus, alert-rules.yml)"]
-        B3["ansible-playbook --syntax-check<br/>(check-linux, deploy-monitoring, deploy-node-exporter)"]
+        B3["ansible-playbook --syntax-check<br/>(l'ensemble des playbooks, voir ansible/README.md)"]
         B4["shellcheck scripts/*.sh"]
     end
 

@@ -72,6 +72,28 @@ applicative réelle n'est pas connue — le mécanisme de surcharge Helm
 (`-f` multiples, dernier fichier prioritaire) est démontré par le chart et
 peut être répliqué dès que ces valeurs seront disponibles.)
 
+## Rollback
+
+Helm conserve l'historique des révisions d'une release, ce qui rend le
+rollback natif et immédiat (contrairement à Terraform, qui doit réappliquer
+une configuration — voir `terraform/README.md`, section « Rollback et
+journalisation ») :
+
+```bash
+# Lister les révisions et leur statut
+helm history saas-app -n saas
+
+# Revenir à la révision précédente
+helm rollback saas-app -n saas
+
+# Revenir à une révision précise
+helm rollback saas-app <numéro> -n saas
+```
+
+Vérifier ensuite l'autoscaling et l'état des pods comme après tout
+déploiement (section suivante) pour confirmer que le rollback a bien
+restauré un état fonctionnel, pas seulement une révision antérieure.
+
 ## Vérifier l'autoscaling
 
 ```bash

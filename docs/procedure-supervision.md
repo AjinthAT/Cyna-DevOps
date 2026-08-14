@@ -77,6 +77,29 @@ Relancer Node Exporter :
 
 Voir `procedure-shuffle-glpi.md` pour le détail de la chaîne d'automatisation du ticket.
 
+## Rollback
+
+Contrairement à Helm (historique de révisions natif, voir
+`helm/saas-app/README.md`), Docker Compose n'a pas de mécanisme de rollback
+intégré : revenir en arrière consiste à redéployer une version antérieure de
+la configuration versionnée dans Git, sur le même principe que le rollback
+Terraform (`terraform/README.md`, section « Rollback et journalisation »).
+
+```bash
+# Revenir à la configuration monitoring d'un commit antérieur
+git log --oneline -- monitoring/
+git checkout <commit précédent> -- monitoring/
+
+# Redéployer avec la configuration restaurée
+cd monitoring
+docker compose up -d --build
+```
+
+Si la régression vient d'une image tierce (ex. nouvelle version de
+`prom/prometheus` cassant la compatibilité), épingler une version connue
+dans `monitoring/docker-compose.yml` (`image: prom/prometheus:v2.x.y` au
+lieu de `:latest`) plutôt que de dépendre de la dernière image publiée.
+
 ## Vérification des services
 
 Après le déploiement de la stack DevOps, les services peuvent être vérifiés avec le script suivant :
