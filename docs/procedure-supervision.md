@@ -21,7 +21,7 @@ Depuis la mise à jour du plan Prometheus (`monitoring/prometheus/prometheus.yml
 | APP-BACKEND-01 | 10.10.45.10 | `linux-node-exporter-infra` | Nécessite Node Exporter |
 | WAZUH-GE-01 | 10.10.50.10 | `linux-node-exporter-infra`, `blackbox-wazuh-dashboard` | Nécessite Node Exporter |
 | BACKUP-GE-01 | 10.10.60.10 | `linux-node-exporter-infra` | Nécessite Node Exporter |
-| AD-GE-01 / AD-GE-02 / FILE-GE-01 | 10.10.30.10/11/20 | `windows-exporter-infra` | **Non couvert par ce dépôt** : nécessite `windows_exporter` installé manuellement (pas de playbook WinRM fourni) |
+| AD-GE-01 / AD-GE-02 / FILE-GE-01 | 10.10.30.10/11/20 | `windows-exporter-infra` | Nécessite windows_exporter (voir plus bas) |
 
 Tant que Node Exporter (ou windows_exporter) n'est pas installé sur une cible, elle apparaît "down" dans Prometheus (`Status > Targets`) — c'est attendu en cours de déploiement, pas une erreur de configuration.
 
@@ -32,6 +32,21 @@ ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-node-exporter
 ```
 
 Ce playbook cible le groupe `[infra_linux]` de `ansible/inventory.ini` (IP à jour avec le plan d'adressage du CDC). Il suppose un accès SSH déjà en place depuis la VM DevOps vers ces machines, et ouvre le port 9100 côté service ; la règle firewall correspondante (VLAN 50 → cible) reste à valider manuellement (cf. CDC section 11.2).
+
+### Déployer windows_exporter sur les machines Windows
+
+```bash
+source .env.local
+ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-windows-exporter.yml
+```
+
+Ce playbook cible le groupe `[infra_windows]` (AD-GE-01, AD-GE-02, FILE-GE-01) via WinRM plutôt que SSH. Prérequis, avant de le lancer :
+
+- WinRM déjà activé côté Windows (script `ConfigureRemotingForAnsible.ps1` de Microsoft ou GPO du domaine) — Ansible ne peut pas l'activer à distance sur une machine qui ne l'a pas déjà ;
+- les collections `ansible.windows`/`community.windows` installées (`ansible-galaxy collection install -r ansible/requirements.yml`) et `pywinrm` (`pip install pywinrm`) ;
+- `WINDOWS_ADMIN_USER`/`WINDOWS_ADMIN_PASSWORD` renseignés dans `.env.local` (voir `.env.example`).
+
+Comme pour Node Exporter, le port ouvert (9182) nécessite que la règle firewall inter-VLAN correspondante (VLAN 50 → cible) soit validée côté Sophos (cf. CDC section 11.2).
 
 ## Vérifier les targets Prometheus
 
@@ -76,6 +91,29 @@ Relancer Node Exporter :
     docker start cyna-node-exporter
 
 Voir `procedure-shuffle-glpi.md` pour le détail de la chaîne d'automatisation du ticket.
+
+## Rollback
+
+Contrairement à Helm (historique de révisions natif, voir
+`helm/saas-app/README.md`), Docker Compose n'a pas de mécanisme de rollback
+intégré : revenir en arrière consiste à redéployer une version antérieure de
+la configuration versionnée dans Git, sur le même principe que le rollback
+Terraform (`terraform/README.md`, section « Rollback et journalisation »).
+
+```bash
+# Revenir à la configuration monitoring d'un commit antérieur
+git log --oneline -- monitoring/
+git checkout <commit précédent> -- monitoring/
+
+# Redéployer avec la configuration restaurée
+cd monitoring
+docker compose up -d --build
+```
+
+Si la régression vient d'une image tierce (ex. nouvelle version de
+`prom/prometheus` cassant la compatibilité), épingler une version connue
+dans `monitoring/docker-compose.yml` (`image: prom/prometheus:v2.x.y` au
+lieu de `:latest`) plutôt que de dépendre de la dernière image publiée.
 
 ## Vérification des services
 

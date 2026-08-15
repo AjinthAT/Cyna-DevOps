@@ -1,0 +1,124 @@
+---
+# Installe windows_exporter sur les serveurs Windows de la maquette Genève
+# (AD-GE-01, AD-GE-02, FILE-GE-01), pour qu'ils remontent réellement dans
+# le job Prometheus "windows-exporter-infra"
+# (monitoring/prometheus/prometheus.yml) : ce job existait déjà mais sans
+# agent installé sur les cibles, qui apparaissaient donc "down" en
+# permanence (cf. docs/procedure-supervision.md).
+#
+# Prérequis : WinRM doit déjà être activé et configuré sur chaque cible
+# (script `ConfigureRemotingForAnsible.ps1` de Microsoft, ou GPO du domaine
+# AD) — contrairement à SSH sur les VM Linux (deploy-node-exporter.yml),
+# Ansible ne peut pas activer WinRM à distance sur une machine qui ne l'a
+# pas déjà, cette étape reste donc manuelle/GPO, hors périmètre de ce
+# playbook et du lot DevOps (cf. CDC section 3.1, AD/postes = domaine
+# Administration).
+#
+# Nécessite les collections ansible.windows et community.windows (voir
+# ansible/requirements.yml) : `ansible-galaxy collection install -r
+# ansible/requirements.yml`.
+#
+# Non testé en conditions réelles : comme deploy-firewall-rules.yml et
+# onboard-azure-arc.yml, ce playbook n'a pas pu être exécuté contre un
+# vrai serveur Windows dans cet environnement de rédaction.
+#
+# Usage :
+#   source .env.local
+#   ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-windows-exporter.yml
+
+- name: Installer windows_exporter sur l'infrastructure Windows CYNA
+  hosts: infra_windows
+  gather_facts: false
+
+  vars:
+    windows_admin_user: "{{ lookup('env', 'WINDOWS_ADMIN_USER') }}"
+    windows_admin_password: "{{ lookup('env', 'WINDOWS_ADMIN_PASSWORD') }}"
+    ansible_connection: winrm
+    ansible_winrm_transport: ntlm
+    ansible_port: 5985
+    ansible_winrm_server_cert_validation: ignore
+    ansible_user: "{{ windows_admin_user }}"
+    ansible_password: "{{ windows_admin_password }}"
+    windows_exporter_version: "0.31.8"
+    windows_exporter_port: 9182
+    windows_exporter_msi: "windows_exporter-{{ windows_exporter_version }}-amd64.msi"
+
+  pre_tasks:
+    - name: Vérifier que les identifiants d'administration Windows sont fournis
+      ansible.builtin.assert:
+        that:
+          - windows_admin_user | length > 0
+          - windows_admin_password | length > 0
+        fail_msg: >-
+          WINDOWS_ADMIN_USER / WINDOWS_ADMIN_PASSWORD non définis. Créer
+          .env.local à partir de .env.example, puis 'source .env.local'
+          avant d'exécuter ce playbook.
+      delegate_to: localhost
+      run_once: true
+
+  tasks:
+    - name: Télécharger l'installeur windows_exporter
+      ansible.windows.win_get_url:
+        url: "https://github.com/prometheus-community/windows_exporter/releases/download/v{{ windows_exporter_version }}/{{ windows_exporter_msi }}"
+        dest: "C:\\Windows\\Temp\\{{ windows_exporter_msi }}"
+
+    - name: Installer windows_exporter (collecteurs par défaut de l'installeur, non surchargés)
+      ansible.windows.win_package:
+        path: "C:\\Windows\\Temp\\{{ windows_exporter_msi }}"
+        state: present
+
+    - name: "Ouvrir le port {{ windows_exporter_port }} dans le pare-feu Windows"
+      community.windows.win_firewall_rule:
+        name: windows_exporter
+        localport: "{{ windows_exporter_port }}"
+        direction: in
+        protocol: tcp
+        action: allow
+        state: present
+        enabled: true
+
+    - name: S'assurer que le service windows_exporter est démarré
+      ansible.windows.win_service:
+        name: windows_exporter
+        state: started
+        start_mode: auto
+
+    # -----------------------------------------------------------------
+    # Laisser le temps au service de commencer à écouter avant le premier
+    # test, plutôt que de compter uniquement sur retries/delay (même
+    # principe que "Attendre le démarrage des services" dans
+    # deploy-monitoring.yml) : évite qu'un refus de connexion sur la toute
+    # première tentative ne soit géré différemment d'un mauvais code HTTP
+    # par win_uri.
+    # -----------------------------------------------------------------
+    - name: Attendre le démarrage du service
+      ansible.builtin.pause:
+        seconds: 10
+
+    # -----------------------------------------------------------------
+    # Test de validation post-déploiement, même principe que les autres
+    # playbooks de ce dépôt (deploy-node-exporter.yml, etc.) : "started"
+    # côté service Windows ne garantit pas que l'endpoint HTTP répond
+    # réellement.
+    # -----------------------------------------------------------------
+    - name: "Test de validation — windows_exporter répond sur /metrics"
+      ansible.windows.win_uri:
+        url: "http://localhost:{{ windows_exporter_port }}/metrics"
+        status_code: 200
+      register: check_windows_exporter
+      retries: 5
+      delay: 3
+      until: check_windows_exporter.status_code == 200
+
+    - name: Résumé du test de validation
+      ansible.builtin.debug:
+        msg: "windows_exporter répond correctement sur {{ inventory_hostname }}:{{ windows_exporter_port }} : déploiement validé."
+
+    - name: Rappel du port à ouvrir côté firewall Sophos
+      ansible.builtin.debug:
+        msg: >
+          windows_exporter écoute sur le port {{ windows_exporter_port }} de
+          {{ inventory_hostname }}. Vérifier que la règle firewall inter-VLAN
+          autorise bien le flux VLAN 50 (SOC-MONITORING, MONITOR-GE-01) vers
+          ce port, cf. CDC section 11.2 (Exigences firewall) — même limite
+          déjà documentée pour Node Exporter dans deploy-node-exporter.yml.

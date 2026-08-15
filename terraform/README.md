@@ -14,7 +14,7 @@ Ce module provisionne le hub Azure décrit dans le cahier des charges (section 1
 
 Ce que ce module ne fait **pas** :
 
-- l'onboarding Azure Arc des serveurs Genève/Paris (agent installé machine par machine, pas un objet Terraform) ;
+- l'onboarding Azure Arc des serveurs Genève/Paris (agent installé machine par machine, pas un objet Terraform — voir `ansible/playbooks/onboard-azure-arc.yml`) ;
 - le déploiement des VM elles-mêmes (hors périmètre Azure, cf. CDC section 4.2 « Périmètre exclu ») ;
 - Shuffle (SOAR), qui reste hors dépôt (voir `docs/procedure-shuffle-glpi.md`).
 

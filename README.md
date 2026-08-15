@@ -116,5 +116,6 @@ La documentation détaillée est disponible dans `docs/` :
 - `procedure-supervision.md` — supervision Prometheus / Grafana ;
 - `procedure-shuffle-glpi.md` — automatisation des tickets GLPI via Shuffle ;
 - `procedure-firewall-automation.md` — matrice de flux Zero Trust et automatisation des règles Sophos via Ansible ;
-- `procedure-pra-pca.md` — sauvegarde et restauration de la stack DevOps ;
+- `procedure-pra-pca.md` — sauvegarde et restauration de la stack DevOps et des configurations IaC ;
+- `procedure-recette-devops.md` — critères de recette du lot DevOps ;
 - `integration-groupe.md` — intégration avec les autres périmètres du projet CYNA.

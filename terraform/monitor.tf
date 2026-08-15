@@ -2,9 +2,9 @@
 # Cf. CDC section 16 : "Log Analytics Workspace" et "Azure Monitor".
 #
 # L'onboarding Azure Arc des serveurs Genève/Paris (agent Connected Machine)
-# n'est pas un objet Terraform : il s'installe machine par machine via un
-# script fourni par Azure au moment de l'enregistrement (cf. procédure
-# d'exploitation, section 19 du CDC). Ce fichier prépare seulement la
+# n'est pas un objet Terraform : il s'installe machine par machine via
+# ansible/playbooks/onboard-azure-arc.yml (cf. docs/procedure-pra-pca.md,
+# section "PRA des configurations IaC"). Ce fichier prépare seulement la
 # destination (workspace + alerting) que les serveurs Arc et les ressources
 # du hub enverront.
 

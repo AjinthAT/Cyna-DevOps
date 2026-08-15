@@ -21,7 +21,7 @@ La liste des flux autorisés vit dans deux fichiers, un par site :
 
 Chaque entrée décrit un flux (zone source, zone destination, services,
 description, journalisation) et référence l'exigence du CDC qu'elle couvre
-(SEC-FW-01 à SEC-FW-05, section 9). C'est la **source de vérité unique** :
+(SEC-FW-01 à SEC-FW-05, section 11.2). C'est la **source de vérité unique** :
 mettre à jour une politique Zero Trust signifie éditer cette liste, pas se
 connecter à l'interface web de Sophos.
 
@@ -108,3 +108,16 @@ ansible-playbook -i ansible/inventory.ini ansible/playbooks/deploy-firewall-rule
   matrice de flux cible stable, pas le cycle de vie de règles de test
   ponctuelles créées manuellement pendant le déploiement — celles-ci
   restent à retirer manuellement, comme documenté dans le CDC.
+
+## Sauvegarde de la configuration (`backup-firewall-config.yml`)
+
+Ce second playbook réutilise le même appel API (`Get FirewallRule`) pour
+exporter la configuration vers un fichier daté (voir
+`docs/procedure-pra-pca.md`, section « PRA des configurations IaC »).
+**Portée limitée à assumer** : il ne sauvegarde que les règles de
+filtrage (`FirewallRule`), pas les objets associés (zones, objets
+Service/IPHost), ni la configuration NAT ou VPN du firewall — une
+restauration complète après remplacement d'un boîtier nécessiterait de
+recréer ces éléments séparément (voir « Prérequis » ci-dessus). Même
+limite que ci-dessus sur le test en conditions réelles : non exécuté
+contre un vrai firewall Sophos dans cet environnement de rédaction.

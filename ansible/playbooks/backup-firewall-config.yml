@@ -1,0 +1,92 @@
+---
+# Sauvegarde la configuration des règles de filtrage des firewalls Sophos
+# (Genève et Paris), en réponse à l'exigence du sujet CYNA (Livrables -
+# GIT/IaC/Scripting, section 4 « Plan de continuité d'activité (PCA) et de
+# reprise après sinistre (PRA) - Automatisation des sauvegardes » :
+# « Utiliser des scripts pour automatiser les sauvegardes des configurations
+# réseau »).
+#
+# Réutilise le même appel API que deploy-firewall-rules.yml (Get
+# FirewallRule) plutôt qu'un mécanisme de backup Sophos distinct et non
+# vérifié dans cet environnement de rédaction (voir docs/procedure-firewall-
+# automation.md, "Limites assumées" — même caveat ici : non testé contre un
+# vrai firewall Sophos).
+#
+# Usage :
+#   source .env.local
+#   ansible-playbook -i ansible/inventory.ini ansible/playbooks/backup-firewall-config.yml
+
+- name: Sauvegarder la configuration des règles de filtrage Sophos
+  hosts: firewalls
+  connection: local
+  gather_facts: false
+
+  vars:
+    sophos_api_username: "{{ lookup('env', 'SOPHOS_' + firewall_site | upper + '_API_USER') }}"
+    sophos_api_password: "{{ lookup('env', 'SOPHOS_' + firewall_site | upper + '_API_PASSWORD') }}"
+    firewall_backup_dir: "{{ lookup('env', 'HOME') }}/cyna-backups/firewall"
+    firewall_backup_date: "{{ lookup('pipe', 'date +%Y%m%d-%H%M%S') }}"
+
+  pre_tasks:
+    - name: Vérifier que les identifiants API sont fournis
+      assert:
+        that:
+          - sophos_api_username | length > 0
+          - sophos_api_password | length > 0
+        fail_msg: >-
+          SOPHOS_{{ firewall_site | upper }}_API_USER / SOPHOS_{{ firewall_site | upper }}_API_PASSWORD
+          non définis. Créer .env.local à partir de .env.example, puis
+          'source .env.local' avant d'exécuter ce playbook.
+
+    - name: "Créer le répertoire de sauvegarde ({{ firewall_site }})"
+      file:
+        path: "{{ firewall_backup_dir }}"
+        state: directory
+        mode: "0700"
+
+  tasks:
+    - name: "Exporter les règles de filtrage actuelles ({{ firewall_site }})"
+      uri:
+        url: "https://{{ ansible_host }}:4444/webconsole/APIController"
+        method: POST
+        body_format: form-urlencoded
+        body:
+          reqxml: |
+            <Request>
+              <Login>
+                <Username>{{ sophos_api_username }}</Username>
+                <Password>{{ sophos_api_password }}</Password>
+              </Login>
+              <Get><FirewallRule></FirewallRule></Get>
+            </Request>
+        validate_certs: false
+        return_content: true
+        status_code: [200]
+      register: firewall_rules_export
+      retries: 3
+      delay: 5
+      until: firewall_rules_export.status == 200
+
+    - name: "Écrire l'export daté sur disque ({{ firewall_site }})"
+      copy:
+        content: "{{ firewall_rules_export.content }}"
+        dest: "{{ firewall_backup_dir }}/sophos-{{ firewall_site }}-firewallrule-{{ firewall_backup_date }}.xml"
+        mode: "0600"
+      register: firewall_backup_file
+
+    # -----------------------------------------------------------------
+    # Test de validation : un export vide (échec silencieux côté API,
+    # zéro octet écrit) n'est pas une sauvegarde exploitable — on vérifie
+    # donc que le fichier écrit contient bien des règles, pas seulement
+    # qu'il existe.
+    # -----------------------------------------------------------------
+    - name: "Test de validation — l'export contient bien des règles ({{ firewall_site }})"
+      assert:
+        that:
+          - "'<FirewallRule' in firewall_rules_export.content"
+        fail_msg: "L'export {{ firewall_backup_file.dest }} ne contient aucune balise <FirewallRule> : sauvegarde probablement vide ou invalide."
+        success_msg: "Export {{ firewall_backup_file.dest }} validé pour {{ firewall_site }}."
+
+    - name: "Résumé ({{ firewall_site }})"
+      debug:
+        msg: "Configuration Sophos {{ firewall_site }} sauvegardée dans {{ firewall_backup_file.dest }}."
