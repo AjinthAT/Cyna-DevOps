@@ -25,7 +25,7 @@ autre que celui qui a construit le lot DevOps.
 | Firewall Zero Trust | `ansible-playbook ansible/playbooks/deploy-firewall-rules.yml` | Chaque règle de la matrice confirmée présente côté Sophos (assert intégré, voir `procedure-firewall-automation.md`) |
 | Sauvegarde config firewall | `ansible-playbook ansible/playbooks/backup-firewall-config.yml` | Export daté non vide, contenant au moins une balise `<FirewallRule>` |
 | Azure Arc | `ansible-playbook ansible/playbooks/onboard-azure-arc.yml` (après `terraform apply` réel) | Machine confirmée `Connected` (assert intégré) |
-| Patch management | `ansible-playbook ansible/playbooks/patch-management.yml` | Rapport daté généré dans `/var/log/cyna-patch-management` sur chaque hôte |
+| Patch management | `ansible-playbook ansible/playbooks/patch-management.yml` (cible `linux:!devops`) | Rapport daté généré dans `/var/log/cyna-patch-management` sur chaque hôte `infra_linux` |
 | Autoscaling SaaS | Génération de charge sur le service, `kubectl get hpa -n saas saas-app` | Nombre de réplicas augmente entre `minReplicas` et `maxReplicas` (`helm/saas-app/README.md`) |
 
 ## Tests de la chaîne d'incident
@@ -63,5 +63,9 @@ externes au lot DevOps :
   Windows dans cet environnement de rédaction, et suppose WinRM déjà
   activé côté AD-GE-01/02 et FILE-GE-01 (hors périmètre Ansible — GPO du
   domaine ou script manuel, à la charge de l'administration AD) ;
+- `patch-management.yml` (comme `deploy-node-exporter.yml`) cible des VM
+  GNS3 (`infra_linux`) non joignables depuis cet environnement de
+  rédaction — seule la partie applicable à `devops` (localhost) est
+  exclue par construction, voir plus haut ;
 - Shuffle lui-même (SOAR) tourne sur une pile Docker Swarm séparée, non
   redéployée par ce dépôt (seul l'export du workflow y est versionné).

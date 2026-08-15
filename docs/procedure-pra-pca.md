@@ -102,12 +102,14 @@ Reconstruction complète depuis zéro (perte totale du hub Azure) :
   Git. En cas de configuration Sophos corrompue ou de remplacement de
   boîtier, rejouer `ansible-playbook ansible/playbooks/deploy-firewall-rules.yml`
   recrée l'intégralité des règles avec vérification automatique
-  (voir `procedure-firewall-automation.md`). Un export daté de la
-  configuration effectivement appliquée est en plus produit par
-  `ansible/playbooks/backup-firewall-config.yml`, à archiver hors du
-  firewall lui-même (ex. Storage Account `stcynaprojet`, conteneur
-  `journaux`, cf. `terraform/README.md`) pour pouvoir comparer un état
-  antérieur en cas de doute sur une modification faite hors playbook.
+  (voir `procedure-firewall-automation.md`). Un export daté des règles de
+  filtrage effectivement appliquées (pas des zones/objets/NAT/VPN — voir
+  « Limites assumées » de `procedure-firewall-automation.md`) est en plus
+  produit par `ansible/playbooks/backup-firewall-config.yml`, à archiver
+  hors du firewall lui-même (ex. Storage Account `stcynaprojet`,
+  conteneur `journaux`, cf. `terraform/README.md`) pour pouvoir comparer
+  un état antérieur en cas de doute sur une modification faite hors
+  playbook.
 - **Stack de supervision et Node Exporter** : `deploy-monitoring.yml` et
   `deploy-node-exporter.yml` sont idempotents et rejouables tels quels pour
   reconstruire une machine depuis zéro.

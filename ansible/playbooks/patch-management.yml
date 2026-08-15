@@ -1,18 +1,29 @@
 ---
-# Applique les mises à jour de sécurité disponibles sur les machines Linux
-# du parc (CDC section 19.1, "Conditions d'exploitation" : "Mises à jour =
-# Ansible / procédures — Patch management traçable").
+# Applique les mises à jour APT disponibles sur les machines Linux du parc
+# (CDC section 19.1, "Conditions d'exploitation" : "Mises à jour = Ansible
+# / procédures — Patch management traçable").
 #
 # "Traçable" ici veut dire : chaque exécution consigne, sur la machine
 # cible, la liste des paquets réellement mis à jour et la date — pas
 # seulement "apt upgrade a été lancé", ce qui suffirait à masquer une
 # mise à jour qui ne trouve rien à faire.
 #
+# Portée : `apt upgrade: safe` met à jour tous les paquets disponibles dans
+# les dépôts configurés, pas seulement les correctifs de sécurité (il n'y a
+# pas de filtrage par origine ici) — à garder en tête si "sécurité" est
+# interprété au sens strict.
+#
+# Cible délibérément `linux:!devops` plutôt que `linux` : la VM DevOps
+# (groupe `devops`) héberge la stack de supervision et exécute Ansible
+# lui-même. Un `apt upgrade` non supervisé dessus pourrait redémarrer
+# Docker ou perturber l'interpréteur Python en plein run — cette machine
+# se met à jour manuellement, avec attention, pas via ce playbook.
+#
 # Usage :
 #   ansible-playbook -i ansible/inventory.ini ansible/playbooks/patch-management.yml
 
-- name: Appliquer les mises à jour de sécurité sur le parc Linux
-  hosts: linux
+- name: Appliquer les mises à jour APT sur le parc Linux (hors VM DevOps)
+  hosts: "linux:!devops"
   become: true
 
   vars:
@@ -23,11 +34,6 @@
       apt:
         update_cache: true
         cache_valid_time: 3600
-
-    - name: Lister les paquets pouvant être mis à niveau (avant)
-      command: apt list --upgradable
-      register: upgradable_before
-      changed_when: false
 
     - name: Appliquer les mises à jour disponibles
       apt:
@@ -47,10 +53,10 @@
 
     # -----------------------------------------------------------------
     # Test de validation / traçabilité : on consigne le résultat réel
-    # (paquets mis à niveau, besoin de redémarrage) plutôt que de se fier
-    # au seul code de sortie du module apt, qui renvoie "ok" aussi bien
-    # quand des paquets ont été mis à jour que quand il n'y avait rien à
-    # faire.
+    # renvoyé par apt (sortie de la commande sous-jacente, qui liste les
+    # paquets effectivement traités) plutôt que de se fier au seul booléen
+    # "changed", qui indique qu'une mise à jour a eu lieu mais ne dit pas
+    # laquelle.
     # -----------------------------------------------------------------
     - name: Consigner le rapport de patch management
       copy:
@@ -59,16 +65,17 @@
         content: |
           Hôte : {{ inventory_hostname }}
           Date : {{ lookup('pipe', 'date -Iseconds') }}
-          Paquets mis à niveau : {{ apt_upgrade_result.changed }}
+          Mises à jour appliquées : {{ apt_upgrade_result.changed }}
           Redémarrage requis : {{ reboot_required.stat.exists }}
 
-          Paquets upgradable avant exécution :
-          {{ upgradable_before.stdout }}
+          Détail de l'exécution apt :
+          {{ apt_upgrade_result.stdout | default('(aucune sortie — rien à mettre à jour)') }}
 
     - name: Résumé du patch management
       debug:
         msg: >-
           {{ inventory_hostname }} : mises à jour appliquées
           ({{ 'des paquets ont été mis à niveau' if apt_upgrade_result.changed else 'déjà à jour' }}).
-          Redémarrage requis : {{ reboot_required.stat.exists }}.
+          Redémarrage requis : {{ reboot_required.stat.exists }}
+          {{ '— à planifier manuellement, ce playbook ne redémarre pas les machines.' if reboot_required.stat.exists else '' }}
           Rapport consigné dans {{ patch_log_dir }}.

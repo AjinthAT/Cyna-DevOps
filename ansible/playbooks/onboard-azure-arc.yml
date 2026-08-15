@@ -79,6 +79,10 @@
         --resource-group {{ arc_resource_group }}
         --location {{ arc_location }}
         --resource-name {{ inventory_hostname }}
+      # no_log : cette commande contient le secret du service principal en
+      # clair dans ses arguments — sans no_log, Ansible l'afficherait dans
+      # les logs/console à chaque exécution et en cas d'échec.
+      no_log: true
       when: >-
         azcmagent_status.rc != 0 or
         (azcmagent_status.stdout | from_json).status | default('') != 'Connected'
@@ -99,7 +103,7 @@
     - name: "Test de validation — {{ inventory_hostname }} est bien Connected"
       assert:
         that:
-          - (azcmagent_final.stdout | from_json).status == 'Connected'
+          - (azcmagent_final.stdout | from_json).status | default('') == 'Connected'
         fail_msg: "{{ inventory_hostname }} n'apparaît pas comme Connected dans Azure Arc après la tentative d'enregistrement."
         success_msg: "{{ inventory_hostname }} confirmé Connected dans Azure Arc (Resource Group {{ arc_resource_group }})."
 

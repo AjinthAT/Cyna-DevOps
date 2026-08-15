@@ -10,7 +10,7 @@
 | `playbooks/deploy-firewall-rules.yml` | `[firewalls]` | Application de la matrice de flux Zero Trust sur les firewalls Sophos (voir `../docs/procedure-firewall-automation.md`) |
 | `playbooks/backup-firewall-config.yml` | `[firewalls]` | Sauvegarde datée des règles de filtrage Sophos (voir `../docs/procedure-firewall-automation.md`) |
 | `playbooks/onboard-azure-arc.yml` | `[infra_linux]` | Enregistrement des serveurs Genève dans Azure Arc (voir `../terraform/README.md`, ressource non couverte par Terraform) |
-| `playbooks/patch-management.yml` | `[linux]` | Mises à jour de sécurité APT avec rapport tracé par exécution (CDC section 19.1) |
+| `playbooks/patch-management.yml` | `linux:!devops` | Mises à jour APT avec rapport tracé par exécution (CDC section 19.1) ; exclut délibérément la VM DevOps elle-même |
 | `playbooks/deploy-windows-exporter.yml` | `[infra_windows]` | Installation de windows_exporter (WinRM) sur l'infra Windows Genève + test de validation `/metrics` |
 
 Groupes d'inventaire : voir `inventory.ini`.
